@@ -1,37 +1,38 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Mail, Lock, LogIn, Sprout } from 'lucide-react';
+import { Mail, Lock, User, Sprout } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface Props {
-  onLoginSuccess: () => void;
-  onGoRegister: () => void;
+  onSuccess: () => void;
+  onGoLogin: () => void;
 }
 
-export default function LoginView({ onLoginSuccess, onGoRegister }: Props) {
-  const { login } = useAuth();
+export default function RegisterView({ onSuccess, onGoLogin }: Props) {
+  const { register } = useAuth();
+  const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (password !== confirm) {
+      setError('Mật khẩu xác nhận không khớp');
+      return;
+    }
     setLoading(true);
     try {
-      await login(email, password);
-      onLoginSuccess();
+      await register(email, password, displayName || undefined);
+      onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Đăng nhập thất bại');
+      setError(err instanceof Error ? err.message : 'Đăng ký thất bại');
     } finally {
       setLoading(false);
     }
-  };
-
-  const fillDemo = () => {
-    setEmail('admin@viralani.com');
-    setPassword('Admin@123');
   };
 
   return (
@@ -42,9 +43,9 @@ export default function LoginView({ onLoginSuccess, onGoRegister }: Props) {
         className="w-full max-w-md bg-white rounded-3xl border-2 border-surface-container shadow-xl overflow-hidden"
       >
         <div className="bg-[#6bbf3a]/15 p-6 border-b border-surface-container text-center space-y-2">
-          <span className="text-4xl block animate-bounce">🎒</span>
-          <h2 className="font-heading text-xl font-black text-primary">Đăng nhập</h2>
-          <p className="text-xs text-on-surface-variant font-medium">Đăng nhập để sử dụng đầy đủ tính năng</p>
+          <span className="text-4xl block">🌱</span>
+          <h2 className="font-heading text-xl font-black text-primary">Tạo tài khoản mới</h2>
+          <p className="text-xs text-on-surface-variant font-medium">Đăng ký để bắt đầu hành trình gieo hạt giống</p>
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-5">
@@ -53,6 +54,19 @@ export default function LoginView({ onLoginSuccess, onGoRegister }: Props) {
               {error}
             </div>
           )}
+
+          <div className="space-y-1">
+            <label className="text-xs font-extrabold text-[#404a39] uppercase tracking-wider flex items-center gap-1.5">
+              <User className="w-4 h-4 text-[#2d6c00]" /> Tên hiển thị
+            </label>
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Nguyễn Văn A"
+              className="w-full p-3 border-2 border-outline-variant focus:border-[#2d6c00] outline-none rounded-2xl text-sm font-medium transition-all bg-[#FFFDF7]"
+            />
+          </div>
 
           <div className="space-y-1">
             <label className="text-xs font-extrabold text-[#404a39] uppercase tracking-wider flex items-center gap-1.5">
@@ -76,7 +90,22 @@ export default function LoginView({ onLoginSuccess, onGoRegister }: Props) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Tối thiểu 6 ký tự"
+              required
+              minLength={6}
+              className="w-full p-3 border-2 border-outline-variant focus:border-[#2d6c00] outline-none rounded-2xl text-sm font-medium transition-all bg-[#FFFDF7]"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-extrabold text-[#404a39] uppercase tracking-wider flex items-center gap-1.5">
+              <Lock className="w-4 h-4 text-[#2d6c00]" /> Xác nhận mật khẩu
+            </label>
+            <input
+              type="password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              placeholder="Nhập lại mật khẩu"
               required
               className="w-full p-3 border-2 border-outline-variant focus:border-[#2d6c00] outline-none rounded-2xl text-sm font-medium transition-all bg-[#FFFDF7]"
             />
@@ -87,29 +116,23 @@ export default function LoginView({ onLoginSuccess, onGoRegister }: Props) {
             disabled={loading}
             className="w-full py-4 rounded-full bg-gradient-to-r from-primary-container to-primary text-white font-extrabold text-sm shadow-md hover:scale-102 transition-transform cursor-pointer disabled:opacity-60"
           >
-            {loading ? 'Đang đăng nhập...' : (
+            {loading ? 'Đang đăng ký...' : (
               <span className="flex items-center justify-center gap-2">
-                <LogIn className="w-4 h-4" /> Đăng nhập
+                <Sprout className="w-4 h-4" /> Tạo tài khoản
               </span>
             )}
           </button>
 
-          <div className="flex items-center justify-between text-xs">
+          <p className="text-center text-xs text-on-surface-variant font-medium">
+            Đã có tài khoản?{' '}
             <button
               type="button"
-              onClick={fillDemo}
-              className="text-[#2d6c00] font-bold hover:underline"
+              onClick={onGoLogin}
+              className="text-[#2d6c00] font-extrabold hover:underline"
             >
-              Dùng tài khoản demo (admin)
+              Đăng nhập ngay
             </button>
-            <button
-              type="button"
-              onClick={onGoRegister}
-              className="text-on-surface-variant font-bold hover:underline"
-            >
-              Tạo tài khoản mới
-            </button>
-          </div>
+          </p>
         </form>
       </motion.div>
     </div>
