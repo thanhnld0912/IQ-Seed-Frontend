@@ -1,0 +1,6 @@
+{
+  "name": "Hạt Giống IQ",
+  "description": "Nền tảng sáng tạo video hoạt hình AI, lồng tiếng và học tập an toàn, sinh động dành riêng cho ba mẹ, thầy cô và bé mầm non.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
