@@ -18,3 +18,7 @@ View your app in AI Studio: https://ai.studio/apps/98b587b5-6aa2-405c-acf6-6e268
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+**Domain:** 
+
+https://viralanifrontend.vercel.app/
