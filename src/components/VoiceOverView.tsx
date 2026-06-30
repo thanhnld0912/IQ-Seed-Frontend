@@ -3,7 +3,12 @@ import { motion } from "motion/react";
 import { Mic, Square, Play, Volume2, Sparkles, Check, Trash2, Sliders, Music, Info } from "lucide-react";
 import { VOICES } from "../data";
 
-export default function VoiceOverView() {
+interface VoiceOverViewProps {
+  userEmail: string | null;
+  onNavigate: (tab: string) => void;
+}
+
+export default function VoiceOverView({ userEmail, onNavigate }: VoiceOverViewProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null);
   const [selectedVoice, setSelectedVoice] = useState("bena");
@@ -33,6 +38,11 @@ export default function VoiceOverView() {
   }, [isRecording]);
 
   const handleStartRecording = () => {
+    if (!userEmail) {
+      alert("Ba mẹ vui lòng đăng nhập để sử dụng tính năng lồng tiếng AI nhé!");
+      onNavigate("login");
+      return;
+    }
     setIsRecording(true);
     setAudioBlobUrl(null);
     setModulatedAudioUrl(null);
@@ -44,6 +54,11 @@ export default function VoiceOverView() {
   };
 
   const handleApplyModulation = () => {
+    if (!userEmail) {
+      alert("Ba mẹ vui lòng đăng nhập để sử dụng tính năng lồng tiếng AI nhé!");
+      onNavigate("login");
+      return;
+    }
     if (!audioBlobUrl) {
       alert("Ba mẹ hoặc bé vui lòng thử ghi âm giọng nói trước nhé!");
       return;

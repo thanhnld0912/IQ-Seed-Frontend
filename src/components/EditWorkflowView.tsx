@@ -1,17 +1,29 @@
 import React, { useState } from "react";
 import { motion } from "motion/react";
-import { STYLES, VOICES, INITIAL_NODES } from "../data";
+import { STYLES, INITIAL_NODES } from "../data";
 import { WorkflowNode } from "../types";
-import { GitFork, Eye, Layers, Settings, ChevronRight, Music, Mic, Mountain, Image as ImageIcon, Sparkles } from "lucide-react";
+import { GitFork, Eye, Layers, Settings, ChevronRight, Mountain } from "lucide-react";
 
-export default function EditWorkflowView() {
+interface EditWorkflowViewProps {
+  userEmail: string | null;
+  onNavigate: (tab: string) => void;
+}
+
+export default function EditWorkflowView({ userEmail, onNavigate }: EditWorkflowViewProps) {
+  const ensureAuth = (actionName: string) => {
+    if (!userEmail) {
+      alert(`Ba mẹ vui lòng đăng nhập để ${actionName} nhé!`);
+      onNavigate("login");
+      return false;
+    }
+    return true;
+  };
+
   const [nodes, setNodes] = useState<WorkflowNode[]>(INITIAL_NODES);
   const [selectedNodeId, setSelectedNodeId] = useState<string>("n-scene");
   
   // Customizable states for each node
   const [scenePrompt, setScenePrompt] = useState("Vương quốc đồi thông lấp lánh cỏ tiên thảo ban đêm, mọc cây nấm đỏ.");
-  const [selectedVoice, setSelectedVoice] = useState("bena");
-  const [musicVolume, setMusicVolume] = useState(40);
   const [transitionEffect, setTransitionEffect] = useState("fade");
 
   const selectedNode = nodes.find(n => n.id === selectedNodeId) || nodes[0];
@@ -20,8 +32,6 @@ export default function EditWorkflowView() {
   const getNodeIcon = (type: string) => {
     switch (type) {
       case "scene": return <Mountain className="w-5 h-5 text-[#2d6c00]" />;
-      case "voice": return <Mic className="w-5 h-5 text-secondary" />;
-      case "music": return <Music className="w-5 h-5 text-[#C792E0]" />;
       case "slide": return <Layers className="w-5 h-5 text-[#FF9F40]" />;
       default: return <Settings className="w-5 h-5 text-[#dba110]" />;
     }
@@ -102,19 +112,28 @@ export default function EditWorkflowView() {
                   </label>
                   <textarea
                     value={scenePrompt}
-                    onChange={(e) => setScenePrompt(e.target.value)}
+                    onChange={(e) => {
+                      if (!ensureAuth("chỉnh sửa kịch bản")) return;
+                      setScenePrompt(e.target.value);
+                    }}
                     className="w-full h-32 p-4 bg-[#FFFDF7] border-2 border-outline-variant focus:border-[#2d6c00] outline-none rounded-xl text-sm font-medium transition-all resize-none"
                     placeholder="Mô tả bối cảnh..."
                   />
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setScenePrompt("Trường mầm non cầu vồng đầy hoa, bạn sâu bông bay trên đu quay gỗ rực rỡ.")}
+                      onClick={() => {
+                        if (!ensureAuth("chỉnh sửa kịch bản")) return;
+                        setScenePrompt("Trường mầm non cầu vồng đầy hoa, bạn sâu bông bay trên đu quay gỗ rực rỡ.");
+                      }}
                       className="px-3 py-1 bg-surface-container-low border border-outline-variant hover:border-[#2d6c00] rounded-full text-[11px] font-bold"
                     >
                       🎪 Sân chơi gỗ
                     </button>
                     <button
-                      onClick={() => setScenePrompt("Ngôi nhà nấm tí hon ấm cúng cạnh lò sưởi bập bùng với ly sữa tươi.")}
+                      onClick={() => {
+                        if (!ensureAuth("chỉnh sửa kịch bản")) return;
+                        setScenePrompt("Ngôi nhà nấm tí hon ấm cúng cạnh lò sưởi bập bùng với ly sữa tươi.");
+                      }}
                       className="px-3 py-1 bg-surface-container-low border border-outline-variant hover:border-[#2d6c00] rounded-full text-[11px] font-bold"
                     >
                       🍄 Nhà nấm sưởi ấm
@@ -125,14 +144,20 @@ export default function EditWorkflowView() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-xs font-black text-on-surface-variant">Đổ bóng</label>
-                    <select className="w-full text-xs font-bold py-2 px-3 border border-outline rounded-xl">
+                    <select
+                      onChange={() => ensureAuth("thay đổi cấu hình đổ bóng")}
+                      className="w-full text-xs font-bold py-2 px-3 border border-outline rounded-xl"
+                    >
                       <option>Mềm mại ngọt ngào (Soft)</option>
                       <option>Sắc nét (Cell shadow)</option>
                     </select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-black text-on-surface-variant">Khử nhiễu AI</label>
-                    <select className="w-full text-xs font-bold py-2 px-3 border border-outline rounded-xl">
+                    <select
+                      onChange={() => ensureAuth("thay đổi cấu hình khử nhiễu")}
+                      className="w-full text-xs font-bold py-2 px-3 border border-outline rounded-xl"
+                    >
                       <option>Khử nâng cao (High Quality)</option>
                       <option>Nhanh (Speed Draft)</option>
                     </select>
@@ -141,65 +166,6 @@ export default function EditWorkflowView() {
               </div>
             )}
 
-            {selectedNode.type === 'voice' && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-on-surface-variant flex items-center gap-2 uppercase">
-                    <Mic className="w-4 h-4 text-secondary" /> Diễn thuyết giọng kể truyện
-                  </label>
-                  <div className="grid grid-cols-2 gap-4">
-                    {VOICES.map((v) => (
-                      <div
-                        key={v.id}
-                        onClick={() => setSelectedVoice(v.id)}
-                        className={`p-3 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-3 ${selectedVoice === v.id ? 'border-secondary bg-secondary-container/10' : 'border-surface-container-high'}`}
-                      >
-                        <img src={v.avatarUrl} alt={v.name} className="w-10 h-10 rounded-full object-cover" />
-                        <div>
-                          <div className="text-sm font-black">{v.name}</div>
-                          <div className="text-[10px] text-outline font-bold">{v.region}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-on-surface-variant">Tốc độ kể chuyện x1.0</label>
-                  <input type="range" min="80" max="150" defaultValue="100" className="w-full h-2 bg-surface-container rounded-lg appearance-none cursor-pointer accent-secondary" />
-                </div>
-              </div>
-            )}
-
-            {selectedNode.type === 'music' && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-on-surface-variant flex items-center gap-2 uppercase">
-                    <Music className="w-4 h-4 text-[#C792E0]" /> Phụ trách Nhạc nền
-                  </label>
-                  <select className="w-full text-sm font-bold p-3 border border-outline rounded-xl">
-                    <option>🎵 Đồi thông bí ẩn (Huyền bí, tò mò)</option>
-                    <option>🎵 Chuyển động tuổi thơ (Vui vẻ, nhí nhảnh)</option>
-                    <option>🎵 Giấc ngủ mầm xanh (Êm ái, ru trẻ nhỏ)</option>
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center text-xs font-black text-on-surface-variant">
-                    <span>Âm lượng hòa phối</span>
-                    <span className="text-[#C792E0]">{musicVolume}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="10"
-                    max="100"
-                    value={musicVolume}
-                    onChange={(e) => setMusicVolume(Number(e.target.value))}
-                    className="w-full h-2 bg-surface-container rounded-lg appearance-none cursor-pointer accent-[#C792E0]"
-                  />
-                </div>
-              </div>
-            )}
 
             {selectedNode.type === 'slide' && (
               <div className="space-y-4">
@@ -209,19 +175,28 @@ export default function EditWorkflowView() {
                   </label>
                   <div className="grid grid-cols-3 gap-3">
                     <button
-                      onClick={() => setTransitionEffect("fade")}
+                      onClick={() => {
+                        if (!ensureAuth("thay đổi hiệu ứng chuyển cảnh")) return;
+                        setTransitionEffect("fade");
+                      }}
                       className={`py-3 border-2 rounded-xl text-xs font-bold transition-all ${transitionEffect === 'fade' ? 'border-[#FF9F40] bg-[#FF9F40]/10' : 'border-surface-container-high'}`}
                     >
                       🎬 Làm mờ dần
                     </button>
                     <button
-                      onClick={() => setTransitionEffect("slide")}
+                      onClick={() => {
+                        if (!ensureAuth("thay đổi hiệu ứng chuyển cảnh")) return;
+                        setTransitionEffect("slide");
+                      }}
                       className={`py-3 border-2 rounded-xl text-xs font-bold transition-all ${transitionEffect === 'slide' ? 'border-[#FF9F40] bg-[#FF9F40]/10' : 'border-surface-container-high'}`}
                     >
                       🎬 Sang trang
                     </button>
                     <button
-                      onClick={() => setTransitionEffect("zoom")}
+                      onClick={() => {
+                        if (!ensureAuth("thay đổi hiệu ứng chuyển cảnh")) return;
+                        setTransitionEffect("zoom");
+                      }}
                       className={`py-3 border-2 rounded-xl text-xs font-bold transition-all ${transitionEffect === 'zoom' ? 'border-[#FF9F40] bg-[#FF9F40]/10' : 'border-surface-container-high'}`}
                     >
                       🎬 Phóng lớn
@@ -247,7 +222,14 @@ export default function EditWorkflowView() {
                 </p>
                 <div className="pt-2">
                   <button
-                    onClick={() => alert("Đang chuẩn bị gói kết xuất nén chất lượng cao cho bé...")}
+                    onClick={() => {
+                      if (!userEmail) {
+                        alert("Ba mẹ vui lòng đăng nhập để sử dụng tính năng kết xuất kịch bản nhé!");
+                        onNavigate("login");
+                        return;
+                      }
+                      alert("Đang chuẩn bị gói kết xuất nén chất lượng cao cho bé...");
+                    }}
                     className="px-8 py-3 rounded-full bg-gradient-to-r from-primary-container to-primary text-white font-extrabold text-sm shadow-md hover:scale-105 transition-transform"
                   >
                     Kết xuất ngay kịch bản này
@@ -288,8 +270,6 @@ export default function EditWorkflowView() {
               </div>
               <ul className="space-y-1.5 text-xs text-on-surface-variant font-bold">
                 <li>• Kịch bản: <span className="text-secondary line-clamp-1">{scenePrompt}</span></li>
-                <li>• Giọng kể: <span className="text-[#2d6c00]">{VOICES.find(v => v.id === selectedVoice)?.name} (Miền {VOICES.find(v => v.id === selectedVoice)?.region})</span></li>
-                <li>• Nhạc nền âm lượng: <span>{musicVolume}%</span></li>
                 <li>• Hiệu ứng lật trang: <span className="text-[#FF9F40]">{transitionEffect}</span></li>
               </ul>
             </div>

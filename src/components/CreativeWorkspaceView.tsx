@@ -5,11 +5,12 @@ import { STYLES, VOICES } from "../data";
 import { VideoItem } from "../types";
 
 interface CreativeWorkspaceViewProps {
+  userEmail: string | null;
   onVideoCreated: (newVideo: VideoItem) => void;
   onNavigate: (tab: string) => void;
 }
 
-export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: CreativeWorkspaceViewProps) {
+export default function CreativeWorkspaceView({ userEmail, onVideoCreated, onNavigate }: CreativeWorkspaceViewProps) {
   const [prompt, setPrompt] = useState("");
   const [selectedStyle, setSelectedStyle] = useState("anime");
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16' | '1:1'>('16:9');
@@ -32,6 +33,11 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
 
   // Magic API expand prompt callback
   const handleAIExpand = async () => {
+    if (!userEmail) {
+      alert("Ba mẹ vui lòng đăng nhập để sử dụng tính năng viết kịch bản thông minh bằng AI nhé!");
+      onNavigate("login");
+      return;
+    }
     if (!prompt.trim()) {
       alert("Vui lòng gõ một vài từ khóa hoặc ý tưởng trước nhé!");
       return;
@@ -74,8 +80,42 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
     setPrompt(text);
   };
 
+  const handleNotebookLMImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!userEmail) {
+      alert("Ba mẹ vui lòng đăng nhập để sử dụng tính năng nhập kịch bản slide nhé!");
+      onNavigate("login");
+      return;
+    }
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result;
+      if (typeof text !== "string") return;
+
+      try {
+        const result = parseNotebookLMContent(file.name, text);
+        setPrompt(result.script);
+        setStoryTitle(result.title);
+        alert(`Nhập kịch bản "${result.title}" từ NotebookLM thành công!`);
+      } catch (err: any) {
+        alert("Không thể phân tích tệp NotebookLM: " + err.message);
+      }
+    };
+    reader.onerror = () => {
+      alert("Lỗi khi đọc tệp.");
+    };
+    reader.readAsText(file);
+  };
+
   // Simulating video generation
   const handleCreateVideo = () => {
+    if (!userEmail) {
+      alert("Ba mẹ vui lòng đăng nhập để sử dụng tính năng tạo video AI nhé!");
+      onNavigate("login");
+      return;
+    }
     if (!prompt.trim()) {
       alert("Hãy nhập kịch bản hoặc ý tưởng câu chuyện mầm non trước khi gieo hạt giống sáng tạo nhé!");
       return;
@@ -203,6 +243,22 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
                 >
                   🚀 Vũ trụ
                 </button>
+              </div>
+
+              {/* NotebookLM Import Option */}
+              <div className="pt-3 border-t border-[#eae8e2] mt-4 flex items-center justify-between">
+                <span className="text-xs text-[#404a39] font-black flex items-center gap-1">
+                  📚 Nhập slide từ NotebookLM:
+                </span>
+                <label className="px-4 py-1.5 bg-[#4bafff]/10 hover:bg-[#4bafff]/25 text-xs text-[#00639c] font-black rounded-full transition-all border border-[#4bafff]/20 cursor-pointer flex items-center gap-1">
+                  📥 Chọn tệp (.txt, .md, .json)
+                  <input
+                    type="file"
+                    accept=".txt,.md,.json"
+                    onChange={handleNotebookLMImport}
+                    className="hidden"
+                  />
+                </label>
               </div>
             </div>
 
@@ -477,3 +533,106 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
     </div>
   );
 }
+
+const parseNotebookLMContent = (fileName: string, rawText: string): { title: string; script: string } => {
+  let parsedTitle = "";
+  let scenes: string[] = [];
+
+  // 1. Try to parse as JSON first
+  try {
+    const data = JSON.parse(rawText);
+    
+    // Handle array of slide objects
+    if (Array.isArray(data)) {
+      data.forEach((item, idx) => {
+        if (typeof item === 'string') {
+          scenes.push(item);
+        } else if (item && typeof item === 'object') {
+          const content = item.content || item.text || item.description || item.body || JSON.stringify(item);
+          const title = item.title || item.name || `Cảnh ${idx + 1}`;
+          scenes.push(`${title}: ${content}`);
+        }
+      });
+    } else if (data && typeof data === 'object') {
+      parsedTitle = data.title || data.name || "";
+      const slides = data.slides || data.scenes || data.pages || data.content;
+      if (Array.isArray(slides)) {
+        slides.forEach((item, idx) => {
+          if (typeof item === 'string') {
+            scenes.push(item);
+          } else if (item && typeof item === 'object') {
+            const content = item.content || item.text || item.description || item.body || JSON.stringify(item);
+            const title = item.title || item.name || `Cảnh ${idx + 1}`;
+            scenes.push(`${title}: ${content}`);
+          }
+        });
+      } else if (typeof slides === 'string') {
+        scenes = slides.split(/\n\n+/);
+      }
+    }
+  } catch (e) {
+    // 2. Not a JSON. Parse as Text/Markdown
+    // Split by Markdown headers like # Slide 1 or ## Scene 1 or just Slide 1:
+    const lines = rawText.split(/\r?\n/);
+    let currentSceneText = "";
+    let currentSceneTitle = "";
+
+    const commitScene = () => {
+      if (currentSceneText.trim()) {
+        const full = currentSceneTitle ? `${currentSceneTitle}: ${currentSceneText.trim()}` : currentSceneText.trim();
+        scenes.push(full);
+      }
+      currentSceneText = "";
+      currentSceneTitle = "";
+    };
+
+    lines.forEach(line => {
+      const headerMatch = line.match(/^(?:#+\s*|Slide\s+\d+:?\s*|Cảnh\s+\d+:?\s*|Scene\s+\d+:?\s*)(.*)$/i);
+      if (headerMatch) {
+        commitScene();
+        currentSceneTitle = headerMatch[1].trim();
+      } else {
+        // Accumulate text
+        if (line.trim()) {
+          currentSceneText += (currentSceneText ? " " : "") + line.trim();
+        }
+      }
+    });
+    commitScene();
+
+    // If no headers were detected, split plain text by double newlines or paragraphs
+    if (scenes.length === 0) {
+      scenes = rawText.split(/\r?\n\r?\n+/).map(p => p.trim()).filter(Boolean);
+    }
+  }
+
+  // Format into 4 scenes (as required by the existing flow)
+  if (scenes.length === 0) {
+    throw new Error("Không tìm thấy nội dung slide hợp lệ trong tệp.");
+  }
+
+  // If there are more/fewer than 4, let's distribute or map them
+  let scriptParts: string[] = [];
+  for (let i = 0; i < 4; i++) {
+    if (i < scenes.length) {
+      scriptParts.push(`[Cảnh ${i + 1}] ${scenes[i]}`);
+    } else {
+      scriptParts.push(`[Cảnh ${i + 1}] (Ba mẹ tự viết thêm nội dung cảnh này nha)`);
+    }
+  }
+
+  if (scenes.length > 4) {
+    const extraScenes = scenes.slice(4).map((s, idx) => `[Cảnh phụ ${idx + 5}] ${s}`).join("\n");
+    scriptParts[3] += "\n" + extraScenes;
+  }
+
+  if (!parsedTitle) {
+    parsedTitle = fileName.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " ");
+    parsedTitle = parsedTitle.charAt(0).toUpperCase() + parsedTitle.slice(1);
+  }
+
+  return {
+    title: parsedTitle,
+    script: scriptParts.join("\n\n")
+  };
+};

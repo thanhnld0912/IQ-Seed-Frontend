@@ -105,6 +105,11 @@ export default function App() {
   // Connected direct template config
   const [prepopulatedPrompt, setPrepopulatedPrompt] = useState("");
   const handleSelectTemplateAndGo = (prompt: string, title: string) => {
+    if (!userEmail) {
+      alert("Ba mẹ vui lòng đăng nhập để sử dụng mẫu kịch bản này nhé!");
+      setCurrentTab("login");
+      return;
+    }
     // Prep prepopulated state
     setPrepopulatedPrompt(prompt);
     // Switch to workspace directly
@@ -165,12 +170,6 @@ export default function App() {
               <BookOpen className="w-4 h-4" /> Thư viện mẫu
             </button>
             <button
-              onClick={() => setCurrentTab("voice")}
-              className={`px-4 py-2 rounded-full text-sm font-black transition-all flex items-center gap-1 cursor-pointer ${currentTab === 'voice' ? 'bg-[#6bbf3a]/15 text-[#2d6c00]' : 'hover:bg-surface-container text-on-surface-variant'}`}
-            >
-              <Mic className="w-4 h-4" /> Lồng giọng AI
-            </button>
-            <button
               onClick={() => setCurrentTab("dashboard")}
               className={`px-4 py-2 rounded-full text-sm font-black transition-all flex items-center gap-1 cursor-pointer ${currentTab === 'dashboard' ? 'bg-[#6bbf3a]/15 text-[#2d6c00]' : 'hover:bg-surface-container text-on-surface-variant'}`}
             >
@@ -228,13 +227,14 @@ export default function App() {
             
             {currentTab === "workspace" && (
               <CreativeWorkspaceView
+                userEmail={userEmail}
                 onVideoCreated={handleVideoCreated}
                 onNavigate={setCurrentTab}
               />
             )}
             
             {currentTab === "workflow" && (
-              <EditWorkflowView />
+              <EditWorkflowView userEmail={userEmail} onNavigate={setCurrentTab} />
             )}
             
             {currentTab === "library" && (
@@ -244,7 +244,7 @@ export default function App() {
             )}
             
             {currentTab === "voice" && (
-              <VoiceOverView />
+              <VoiceOverView userEmail={userEmail} onNavigate={setCurrentTab} />
             )}
             
             {currentTab === "dashboard" && (
