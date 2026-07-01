@@ -230,26 +230,6 @@ export const INITIAL_NODES: WorkflowNode[] = [
     image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAGRMABwkcsNkB6cazPtEcY1MX0pbhEmErC97ndL66vIF_w8XhjN92ddO9pmQQy1Yjwg2vmPFnUuLAcGrSalN7sXtAGIElJ2IEq-sgt0GCdFg-fuZ1ge0gwHOo1ekNG0XpUkZIFV29AgYsK5GPpSta_0wzRKgyTn4Idr8yaj9nXTmgqRZ1NrrRh4RKK9-vSuSkNdc8k_DxtQVBNy4woQ2F38eLkTrZm4PE76wiYJjidBsh061GFgL7aneO73JddATNBuSoYpMqQrmyP"
   },
   {
-    id: "n-voice",
-    type: "voice",
-    label: "Thêm giọng",
-    icon: "mic",
-    colorClass: "bg-secondary-container text-white",
-    bgColorClass: "bg-[#4bafff]/10",
-    borderColorClass: "border-[#4bafff]",
-    details: "Giọng kể Bé Na ngọt ngào"
-  },
-  {
-    id: "n-music",
-    type: "music",
-    label: "Nhạc nền",
-    icon: "music_note",
-    colorClass: "bg-[#C792E0] text-white",
-    bgColorClass: "bg-[#C792E0]/15",
-    borderColorClass: "border-[#C792E0]",
-    details: "Giai điệu Hành trình Bí ẩn"
-  },
-  {
     id: "n-slide",
     type: "slide",
     label: "Ghép slide",

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Sparkles, LayoutGrid, Clock, ChevronDown, Wand2, Star, Play, CheckCircle, Flame, Download, Mic, GitFork } from "lucide-react";
+import { Sparkles, LayoutGrid, Clock, ChevronDown, Wand2, Star, Play, CheckCircle, Flame, Download, Mic, GitFork, Upload } from "lucide-react";
 import { STYLES, VOICES } from "../data";
 import { VideoItem } from "../types";
 import { useAuth } from "../context/AuthContext";
@@ -31,6 +31,165 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
 
   // Playback state
   const [isPlaying, setIsPlaying] = useState(false);
+
+  const handleImportNotebookLM = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (!content) return;
+
+      try {
+        if (file.name.endsWith(".json")) {
+          // Parse JSON
+          const data = JSON.parse(content);
+          let slides: Array<{ title?: string; content?: string }> = [];
+
+          if (Array.isArray(data)) {
+            slides = data.map((item: any) => {
+              if (typeof item === 'string') {
+                return { content: item };
+              } else if (item && typeof item === 'object') {
+                return {
+                  title: item.title || item.name || item.header || item.topic,
+                  content: item.content || item.text || item.body || item.description
+                };
+              }
+              return {};
+            }).filter((item: any) => item.title || item.content);
+          } else if (data && typeof data === 'object') {
+            const possibleArray = data.slides || data.scenes || data.notes || data.items || data.data;
+            if (Array.isArray(possibleArray)) {
+              slides = possibleArray.map((item: any) => {
+                if (typeof item === 'string') {
+                  return { content: item };
+                } else if (item && typeof item === 'object') {
+                  return {
+                    title: item.title || item.name || item.header || item.topic,
+                    content: item.content || item.text || item.body || item.description
+                  };
+                }
+                return {};
+              }).filter((item: any) => item.title || item.content);
+            } else {
+              // Single object with key-value pairs or other shapes
+              slides = Object.keys(data).map(key => ({
+                title: key,
+                content: typeof data[key] === 'string' ? data[key] : JSON.stringify(data[key])
+              }));
+            }
+          }
+
+          if (slides.length === 0) {
+            alert("Tệp JSON không chứa danh sách slide hợp lệ!");
+            return;
+          }
+
+          // Convert to internal format
+          let formattedScript = "";
+          slides.forEach((slide, idx) => {
+            const displayTitle = slide.title ? `: ${slide.title}` : "";
+            formattedScript += `[Cảnh ${idx + 1}${displayTitle}]\n${slide.content || ""}\n\n`;
+          });
+          formattedScript = formattedScript.trim();
+
+          setPrompt(formattedScript);
+          setStoryTitle(file.name.replace(/\.[^/.]+$/, ""));
+          alert(`Đã nhập thành công ${slides.length} slide từ tệp JSON!`);
+        } else {
+          // Parse Text/Markdown (.txt, .md)
+          const lines = content.split("\n");
+          const slides: Array<{ title: string; bodyLines: string[] }> = [];
+          let currentSlideTitle = "";
+          let currentSlideBody: string[] = [];
+
+          const slideMarkerRegex = /^(?:#+\s*|\[?Slide\s*|\[?Cảnh\s*|\[?Trang\s*)(\d+)?(?:[:\]\-]\s*|\s+)?(.*)$/i;
+
+          lines.forEach((line) => {
+            const trimmed = line.trim();
+            if (!trimmed) return;
+
+            const match = line.match(slideMarkerRegex);
+            if (match) {
+              // Start of a new slide
+              if (currentSlideTitle || currentSlideBody.length > 0) {
+                slides.push({
+                  title: currentSlideTitle || `Cảnh ${slides.length + 1}`,
+                  bodyLines: currentSlideBody
+                });
+              }
+              // Set new slide details
+              const titlePart = match[2]?.trim();
+              const numPart = match[1];
+              currentSlideTitle = titlePart || (numPart ? `Cảnh ${numPart}` : "");
+              currentSlideBody = [];
+            } else {
+              if (currentSlideTitle === "" && currentSlideBody.length === 0) {
+                // If text starts without slide heading, use first non-empty line as title
+                currentSlideTitle = trimmed;
+              } else {
+                currentSlideBody.push(trimmed);
+              }
+            }
+          });
+
+          // Push the last slide
+          if (currentSlideTitle || currentSlideBody.length > 0) {
+            slides.push({
+              title: currentSlideTitle || `Cảnh ${slides.length + 1}`,
+              bodyLines: currentSlideBody
+            });
+          }
+
+          // Fallback if no clear slides/headers were parsed
+          if (slides.length === 0) {
+            // Split by double newline paragraphs
+            const paragraphs = content.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+            paragraphs.forEach((p, idx) => {
+              const linesOfP = p.split("\n").map(l => l.trim()).filter(Boolean);
+              if (linesOfP.length > 0) {
+                slides.push({
+                  title: linesOfP[0],
+                  bodyLines: linesOfP.slice(1)
+                });
+              }
+            });
+          }
+
+          if (slides.length === 0) {
+            alert("Tệp văn bản trống hoặc không thể phân tích nội dung!");
+            return;
+          }
+
+          // Convert to internal format
+          let formattedScript = "";
+          slides.forEach((slide, idx) => {
+            const displayTitle = slide.title ? `: ${slide.title}` : "";
+            const bodyText = slide.bodyLines.join("\n");
+            formattedScript += `[Cảnh ${idx + 1}${displayTitle}]\n${bodyText}\n\n`;
+          });
+          formattedScript = formattedScript.trim();
+
+          setPrompt(formattedScript);
+          setStoryTitle(file.name.replace(/\.[^/.]+$/, ""));
+          alert(`Đã nhập thành công ${slides.length} cảnh từ tài liệu NotebookLM!`);
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Đã xảy ra lỗi khi phân tích nội dung tệp. Vui lòng kiểm tra định dạng tệp!");
+      }
+    };
+
+    reader.onerror = () => {
+      alert("Không thể đọc tệp tin này!");
+    };
+
+    reader.readAsText(file);
+    // Reset file input value to allow importing the same file again
+    e.target.value = "";
+  };
 
   // Magic API expand prompt callback
   const handleAIExpand = async () => {
@@ -165,9 +324,23 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
             
             {/* Main Prompt Input */}
             <div className="bg-white p-6 rounded-3xl shadow-[0_16px_32px_rgba(217,179,140,0.15)] border-2 border-surface-container relative group">
-              <h2 className="font-heading text-xl text-primary font-black mb-3">
-                Kể cho mình nghe câu chuyện của bé nhé!
-              </h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                <h2 className="font-heading text-xl text-primary font-black">
+                  Kể cho mình nghe câu chuyện của bé nhé!
+                </h2>
+                <div className="flex items-center gap-2">
+                  <label className="cursor-pointer px-4 py-1.5 bg-[#4bafff]/10 hover:bg-[#4bafff]/25 text-[#004a77] text-xs font-black rounded-full transition-all border border-[#4bafff]/20 flex items-center gap-1.5 shadow-sm">
+                    <Upload className="w-3.5 h-3.5 text-[#004a77]" />
+                    <span>Import NotebookLM</span>
+                    <input
+                      type="file"
+                      accept=".txt,.md,.json"
+                      onChange={handleImportNotebookLM}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
               
               <div className="relative">
                 <textarea

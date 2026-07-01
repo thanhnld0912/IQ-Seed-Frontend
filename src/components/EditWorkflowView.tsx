@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { motion } from "motion/react";
-import { STYLES, VOICES, INITIAL_NODES } from "../data";
+import { STYLES, INITIAL_NODES } from "../data";
 import { WorkflowNode } from "../types";
-import { GitFork, Eye, Layers, Settings, ChevronRight, Music, Mic, Mountain, Image as ImageIcon, Sparkles } from "lucide-react";
+import { GitFork, Eye, Layers, Settings, ChevronRight, Mountain, Image as ImageIcon, Sparkles } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 interface EditWorkflowViewProps {
@@ -16,8 +16,6 @@ export default function EditWorkflowView({ onNavigate }: EditWorkflowViewProps) 
   
   // Customizable states for each node
   const [scenePrompt, setScenePrompt] = useState("Vương quốc đồi thông lấp lánh cỏ tiên thảo ban đêm, mọc cây nấm đỏ.");
-  const [selectedVoice, setSelectedVoice] = useState("bena");
-  const [musicVolume, setMusicVolume] = useState(40);
   const [transitionEffect, setTransitionEffect] = useState("fade");
 
   const selectedNode = nodes.find(n => n.id === selectedNodeId) || nodes[0];
@@ -26,8 +24,6 @@ export default function EditWorkflowView({ onNavigate }: EditWorkflowViewProps) 
   const getNodeIcon = (type: string) => {
     switch (type) {
       case "scene": return <Mountain className="w-5 h-5 text-[#2d6c00]" />;
-      case "voice": return <Mic className="w-5 h-5 text-secondary" />;
-      case "music": return <Music className="w-5 h-5 text-[#C792E0]" />;
       case "slide": return <Layers className="w-5 h-5 text-[#FF9F40]" />;
       default: return <Settings className="w-5 h-5 text-[#dba110]" />;
     }
@@ -53,7 +49,7 @@ export default function EditWorkflowView({ onNavigate }: EditWorkflowViewProps) 
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-4 py-8">
             
             {/* Horizontal connection line indicator */}
-            <div className="absolute top-1/2 left-0 w-full h-1 bg-gradient-to-r from-[#6bbf3a] via-[#4bafff] to-[#dba110] -translate-y-1/2 hidden md:block opacity-60 rounded-full"></div>
+            <div className="absolute top-1/2 left-0 w-full h-1 bg-gradient-to-r from-[#6bbf3a] via-[#FF9F40] to-[#dba110] -translate-y-1/2 hidden md:block opacity-60 rounded-full"></div>
             
             {nodes.map((node, index) => {
               const isSelected = node.id === selectedNodeId;
@@ -179,95 +175,7 @@ export default function EditWorkflowView({ onNavigate }: EditWorkflowViewProps) 
               </div>
             )}
 
-            {selectedNode.type === 'voice' && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-on-surface-variant flex items-center gap-2 uppercase">
-                    <Mic className="w-4 h-4 text-secondary" /> Diễn thuyết giọng kể truyện
-                  </label>
-                  <div className="grid grid-cols-2 gap-4">
-                    {VOICES.map((v) => (
-                      <div
-                        key={v.id}
-                        onClick={() => {
-                          if (!isAuthenticated) {
-                            onNavigate("login");
-                            return;
-                          }
-                          setSelectedVoice(v.id);
-                        }}
-                        className={`p-3 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-3 ${selectedVoice === v.id ? 'border-secondary bg-secondary-container/10' : 'border-surface-container-high'}`}
-                      >
-                        <img src={v.avatarUrl} alt={v.name} className="w-10 h-10 rounded-full object-cover" />
-                        <div>
-                          <div className="text-sm font-black">{v.name}</div>
-                          <div className="text-[10px] text-outline font-bold">{v.region}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-on-surface-variant">Tốc độ kể chuyện x1.0</label>
-                  <input
-                    type="range"
-                    min="80"
-                    max="150"
-                    defaultValue="100"
-                    onChange={() => {
-                      if (!isAuthenticated) {
-                        onNavigate("login");
-                      }
-                    }}
-                    className="w-full h-2 bg-surface-container rounded-lg appearance-none cursor-pointer accent-secondary"
-                  />
-                </div>
-              </div>
-            )}
-
-            {selectedNode.type === 'music' && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-on-surface-variant flex items-center gap-2 uppercase">
-                    <Music className="w-4 h-4 text-[#C792E0]" /> Phụ trách Nhạc nền
-                  </label>
-                  <select
-                    className="w-full text-sm font-bold p-3 border border-outline rounded-xl"
-                    onChange={() => {
-                      if (!isAuthenticated) {
-                        onNavigate("login");
-                      }
-                    }}
-                  >
-                    <option>🎵 Đồi thông bí ẩn (Huyền bí, tò mò)</option>
-                    <option>🎵 Chuyển động tuổi thơ (Vui vẻ, nhí nhảnh)</option>
-                    <option>🎵 Giấc ngủ mầm xanh (Êm ái, ru trẻ nhỏ)</option>
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center text-xs font-black text-on-surface-variant">
-                    <span>Âm lượng hòa phối</span>
-                    <span className="text-[#C792E0]">{musicVolume}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="10"
-                    max="100"
-                    value={musicVolume}
-                    onChange={(e) => {
-                      if (!isAuthenticated) {
-                        onNavigate("login");
-                        return;
-                      }
-                      setMusicVolume(Number(e.target.value));
-                    }}
-                    className="w-full h-2 bg-surface-container rounded-lg appearance-none cursor-pointer accent-[#C792E0]"
-                  />
-                </div>
-              </div>
-            )}
 
             {selectedNode.type === 'slide' && (
               <div className="space-y-4">
@@ -380,8 +288,6 @@ export default function EditWorkflowView({ onNavigate }: EditWorkflowViewProps) 
               </div>
               <ul className="space-y-1.5 text-xs text-on-surface-variant font-bold">
                 <li>• Kịch bản: <span className="text-secondary line-clamp-1">{scenePrompt}</span></li>
-                <li>• Giọng kể: <span className="text-[#2d6c00]">{VOICES.find(v => v.id === selectedVoice)?.name} (Miền {VOICES.find(v => v.id === selectedVoice)?.region})</span></li>
-                <li>• Nhạc nền âm lượng: <span>{musicVolume}%</span></li>
                 <li>• Hiệu ứng lật trang: <span className="text-[#FF9F40]">{transitionEffect}</span></li>
               </ul>
             </div>
