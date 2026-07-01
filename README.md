@@ -21,4 +21,4 @@ View your app in AI Studio: https://ai.studio/apps/98b587b5-6aa2-405c-acf6-6e268
 
 **Domain:** 
 
-https://viralanifrontend.vercel.app/
+https://iq-seed-frontend.vercel.app/
