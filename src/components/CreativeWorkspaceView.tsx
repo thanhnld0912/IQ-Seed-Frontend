@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import { Sparkles, LayoutGrid, Clock, ChevronDown, Wand2, Star, Play, CheckCircle, Flame, Download, Mic, GitFork } from "lucide-react";
 import { STYLES, VOICES } from "../data";
 import { VideoItem } from "../types";
+import { useAuth } from "../context/AuthContext";
 
 interface CreativeWorkspaceViewProps {
   onVideoCreated: (newVideo: VideoItem) => void;
@@ -10,6 +11,7 @@ interface CreativeWorkspaceViewProps {
 }
 
 export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: CreativeWorkspaceViewProps) {
+  const { isAuthenticated } = useAuth();
   const [prompt, setPrompt] = useState("");
   const [selectedStyle, setSelectedStyle] = useState("anime");
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16' | '1:1'>('16:9');
@@ -32,6 +34,10 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
 
   // Magic API expand prompt callback
   const handleAIExpand = async () => {
+    if (!isAuthenticated) {
+      onNavigate("login");
+      return;
+    }
     if (!prompt.trim()) {
       alert("Vui lòng gõ một vài từ khóa hoặc ý tưởng trước nhé!");
       return;
@@ -76,6 +82,10 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
 
   // Simulating video generation
   const handleCreateVideo = () => {
+    if (!isAuthenticated) {
+      onNavigate("login");
+      return;
+    }
     if (!prompt.trim()) {
       alert("Hãy nhập kịch bản hoặc ý tưởng câu chuyện mầm non trước khi gieo hạt giống sáng tạo nhé!");
       return;

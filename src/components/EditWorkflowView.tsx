@@ -3,8 +3,14 @@ import { motion } from "motion/react";
 import { STYLES, VOICES, INITIAL_NODES } from "../data";
 import { WorkflowNode } from "../types";
 import { GitFork, Eye, Layers, Settings, ChevronRight, Music, Mic, Mountain, Image as ImageIcon, Sparkles } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
-export default function EditWorkflowView() {
+interface EditWorkflowViewProps {
+  onNavigate: (tab: string) => void;
+}
+
+export default function EditWorkflowView({ onNavigate }: EditWorkflowViewProps) {
+  const { isAuthenticated } = useAuth();
   const [nodes, setNodes] = useState<WorkflowNode[]>(INITIAL_NODES);
   const [selectedNodeId, setSelectedNodeId] = useState<string>("n-scene");
   
@@ -102,19 +108,37 @@ export default function EditWorkflowView() {
                   </label>
                   <textarea
                     value={scenePrompt}
-                    onChange={(e) => setScenePrompt(e.target.value)}
+                    onChange={(e) => {
+                      if (!isAuthenticated) {
+                        onNavigate("login");
+                        return;
+                      }
+                      setScenePrompt(e.target.value);
+                    }}
                     className="w-full h-32 p-4 bg-[#FFFDF7] border-2 border-outline-variant focus:border-[#2d6c00] outline-none rounded-xl text-sm font-medium transition-all resize-none"
                     placeholder="Mô tả bối cảnh..."
                   />
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setScenePrompt("Trường mầm non cầu vồng đầy hoa, bạn sâu bông bay trên đu quay gỗ rực rỡ.")}
+                      onClick={() => {
+                        if (!isAuthenticated) {
+                          onNavigate("login");
+                          return;
+                        }
+                        setScenePrompt("Trường mầm non cầu vồng đầy hoa, bạn sâu bông bay trên đu quay gỗ rực rỡ.");
+                      }}
                       className="px-3 py-1 bg-surface-container-low border border-outline-variant hover:border-[#2d6c00] rounded-full text-[11px] font-bold"
                     >
                       🎪 Sân chơi gỗ
                     </button>
                     <button
-                      onClick={() => setScenePrompt("Ngôi nhà nấm tí hon ấm cúng cạnh lò sưởi bập bùng với ly sữa tươi.")}
+                      onClick={() => {
+                        if (!isAuthenticated) {
+                          onNavigate("login");
+                          return;
+                        }
+                        setScenePrompt("Ngôi nhà nấm tí hon ấm cúng cạnh lò sưởi bập bùng với ly sữa tươi.");
+                      }}
                       className="px-3 py-1 bg-surface-container-low border border-outline-variant hover:border-[#2d6c00] rounded-full text-[11px] font-bold"
                     >
                       🍄 Nhà nấm sưởi ấm
@@ -125,14 +149,28 @@ export default function EditWorkflowView() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-xs font-black text-on-surface-variant">Đổ bóng</label>
-                    <select className="w-full text-xs font-bold py-2 px-3 border border-outline rounded-xl">
+                    <select
+                      className="w-full text-xs font-bold py-2 px-3 border border-outline rounded-xl"
+                      onChange={() => {
+                        if (!isAuthenticated) {
+                          onNavigate("login");
+                        }
+                      }}
+                    >
                       <option>Mềm mại ngọt ngào (Soft)</option>
                       <option>Sắc nét (Cell shadow)</option>
                     </select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-black text-on-surface-variant">Khử nhiễu AI</label>
-                    <select className="w-full text-xs font-bold py-2 px-3 border border-outline rounded-xl">
+                    <select
+                      className="w-full text-xs font-bold py-2 px-3 border border-outline rounded-xl"
+                      onChange={() => {
+                        if (!isAuthenticated) {
+                          onNavigate("login");
+                        }
+                      }}
+                    >
                       <option>Khử nâng cao (High Quality)</option>
                       <option>Nhanh (Speed Draft)</option>
                     </select>
@@ -151,7 +189,13 @@ export default function EditWorkflowView() {
                     {VOICES.map((v) => (
                       <div
                         key={v.id}
-                        onClick={() => setSelectedVoice(v.id)}
+                        onClick={() => {
+                          if (!isAuthenticated) {
+                            onNavigate("login");
+                            return;
+                          }
+                          setSelectedVoice(v.id);
+                        }}
                         className={`p-3 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-3 ${selectedVoice === v.id ? 'border-secondary bg-secondary-container/10' : 'border-surface-container-high'}`}
                       >
                         <img src={v.avatarUrl} alt={v.name} className="w-10 h-10 rounded-full object-cover" />
@@ -166,7 +210,18 @@ export default function EditWorkflowView() {
 
                 <div className="space-y-2">
                   <label className="text-xs font-black text-on-surface-variant">Tốc độ kể chuyện x1.0</label>
-                  <input type="range" min="80" max="150" defaultValue="100" className="w-full h-2 bg-surface-container rounded-lg appearance-none cursor-pointer accent-secondary" />
+                  <input
+                    type="range"
+                    min="80"
+                    max="150"
+                    defaultValue="100"
+                    onChange={() => {
+                      if (!isAuthenticated) {
+                        onNavigate("login");
+                      }
+                    }}
+                    className="w-full h-2 bg-surface-container rounded-lg appearance-none cursor-pointer accent-secondary"
+                  />
                 </div>
               </div>
             )}
@@ -177,7 +232,14 @@ export default function EditWorkflowView() {
                   <label className="text-xs font-black text-on-surface-variant flex items-center gap-2 uppercase">
                     <Music className="w-4 h-4 text-[#C792E0]" /> Phụ trách Nhạc nền
                   </label>
-                  <select className="w-full text-sm font-bold p-3 border border-outline rounded-xl">
+                  <select
+                    className="w-full text-sm font-bold p-3 border border-outline rounded-xl"
+                    onChange={() => {
+                      if (!isAuthenticated) {
+                        onNavigate("login");
+                      }
+                    }}
+                  >
                     <option>🎵 Đồi thông bí ẩn (Huyền bí, tò mò)</option>
                     <option>🎵 Chuyển động tuổi thơ (Vui vẻ, nhí nhảnh)</option>
                     <option>🎵 Giấc ngủ mầm xanh (Êm ái, ru trẻ nhỏ)</option>
@@ -194,7 +256,13 @@ export default function EditWorkflowView() {
                     min="10"
                     max="100"
                     value={musicVolume}
-                    onChange={(e) => setMusicVolume(Number(e.target.value))}
+                    onChange={(e) => {
+                      if (!isAuthenticated) {
+                        onNavigate("login");
+                        return;
+                      }
+                      setMusicVolume(Number(e.target.value));
+                    }}
                     className="w-full h-2 bg-surface-container rounded-lg appearance-none cursor-pointer accent-[#C792E0]"
                   />
                 </div>
@@ -209,19 +277,37 @@ export default function EditWorkflowView() {
                   </label>
                   <div className="grid grid-cols-3 gap-3">
                     <button
-                      onClick={() => setTransitionEffect("fade")}
+                      onClick={() => {
+                        if (!isAuthenticated) {
+                          onNavigate("login");
+                          return;
+                        }
+                        setTransitionEffect("fade");
+                      }}
                       className={`py-3 border-2 rounded-xl text-xs font-bold transition-all ${transitionEffect === 'fade' ? 'border-[#FF9F40] bg-[#FF9F40]/10' : 'border-surface-container-high'}`}
                     >
                       🎬 Làm mờ dần
                     </button>
                     <button
-                      onClick={() => setTransitionEffect("slide")}
+                      onClick={() => {
+                        if (!isAuthenticated) {
+                          onNavigate("login");
+                          return;
+                        }
+                        setTransitionEffect("slide");
+                      }}
                       className={`py-3 border-2 rounded-xl text-xs font-bold transition-all ${transitionEffect === 'slide' ? 'border-[#FF9F40] bg-[#FF9F40]/10' : 'border-surface-container-high'}`}
                     >
                       🎬 Sang trang
                     </button>
                     <button
-                      onClick={() => setTransitionEffect("zoom")}
+                      onClick={() => {
+                        if (!isAuthenticated) {
+                          onNavigate("login");
+                          return;
+                        }
+                        setTransitionEffect("zoom");
+                      }}
                       className={`py-3 border-2 rounded-xl text-xs font-bold transition-all ${transitionEffect === 'zoom' ? 'border-[#FF9F40] bg-[#FF9F40]/10' : 'border-surface-container-high'}`}
                     >
                       🎬 Phóng lớn
@@ -247,7 +333,13 @@ export default function EditWorkflowView() {
                 </p>
                 <div className="pt-2">
                   <button
-                    onClick={() => alert("Đang chuẩn bị gói kết xuất nén chất lượng cao cho bé...")}
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        onNavigate("login");
+                        return;
+                      }
+                      alert("Đang chuẩn bị gói kết xuất nén chất lượng cao cho bé...");
+                    }}
                     className="px-8 py-3 rounded-full bg-gradient-to-r from-primary-container to-primary text-white font-extrabold text-sm shadow-md hover:scale-105 transition-transform"
                   >
                     Kết xuất ngay kịch bản này

@@ -27,7 +27,7 @@ import LoginView from "./components/LoginView";
 import RegisterView from "./components/RegisterView";
 import ManageUsersView from "./components/ManageUsersView";
 
-const PROTECTED_TABS = ["workspace", "workflow", "library", "voice", "dashboard", "manage-users"];
+const PROTECTED_TABS = ["library", "voice", "dashboard", "manage-users"];
 
 export default function App() {
   const { user, isAuthenticated, logout, loading } = useAuth();
@@ -125,10 +125,9 @@ export default function App() {
 
           <nav className="hidden lg:flex items-center gap-1">
             {tabBtn("home", <Home className="w-4 h-4" />, "Trang chủ")}
-            {tabBtn("workspace", <PlusCircle className="w-4 h-4" />, "Gieo hạt giống")}
-            {tabBtn("workflow", <GitFork className="w-4 h-4" />, "Workflow")}
+            {tabBtn("workspace", <PlusCircle className="w-4 h-4" />, "Gieo Hạt Giống")}
+            {tabBtn("workflow", <GitFork className="w-4 h-4" />, "Workflow Kịch Bản")}
             {tabBtn("library", <BookOpen className="w-4 h-4" />, "Thư viện mẫu")}
-            {tabBtn("voice", <Mic className="w-4 h-4" />, "Lồng giọng AI")}
             {tabBtn("dashboard", <Film className="w-4 h-4" />, "Tác phẩm của bé")}
             {isAuthenticated && tabBtn("manage-users", <Users className="w-4 h-4" />, "Quản lý User")}
           </nav>
@@ -191,10 +190,12 @@ export default function App() {
               </div>
             )}
 
-            {currentTab === "workspace" && isAuthenticated && (
+            {currentTab === "workspace" && (
               <CreativeWorkspaceView onVideoCreated={handleVideoCreated} onNavigate={navigateTo} />
             )}
-            {currentTab === "workflow" && isAuthenticated && <EditWorkflowView />}
+            {currentTab === "workflow" && (
+              <EditWorkflowView onNavigate={navigateTo} />
+            )}
             {currentTab === "library" && isAuthenticated && (
               <TemplateLibraryView onSelectTemplate={handleSelectTemplateAndGo} />
             )}
@@ -229,8 +230,8 @@ export default function App() {
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-surface-container p-2 flex justify-around items-center lg:hidden shadow-[0_-8px_24px_rgba(0,0,0,0.05)]">
         {[
           { tab: "home", icon: <Home className="w-5 h-5 mb-0.5" />, label: "Trang chủ" },
-          { tab: "workspace", icon: <PlusCircle className="w-5 h-5 mb-0.5" />, label: "Tạo video" },
-          { tab: "workflow", icon: <GitFork className="w-5 h-5 mb-0.5" />, label: "Workflow" },
+          { tab: "workspace", icon: <PlusCircle className="w-5 h-5 mb-0.5" />, label: "Gieo Hạt Giống" },
+          { tab: "workflow", icon: <GitFork className="w-5 h-5 mb-0.5" />, label: "Workflow Kịch Bản" },
           { tab: "library", icon: <BookOpen className="w-5 h-5 mb-0.5" />, label: "Thư viện" },
           { tab: "dashboard", icon: <Film className="w-5 h-5 mb-0.5" />, label: "Của bé" },
         ].map(({ tab, icon, label }) => (
