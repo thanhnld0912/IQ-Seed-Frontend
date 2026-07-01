@@ -219,25 +219,44 @@ export const TEMPLATES: VideoTemplate[] = [
 
 export const INITIAL_NODES: WorkflowNode[] = [
   {
-    id: "n-scene",
-    type: "scene",
-    label: "Tạo cảnh",
-    icon: "landscape",
-    colorClass: "bg-primary-container text-white",
+    id: "n-script",
+    type: "script",
+    label: "Kịch bản",
+    icon: "sparkles",
+    colorClass: "bg-[#6bbf3a] text-white",
     bgColorClass: "bg-[#6bbf3a]/10",
     borderColorClass: "border-[#6bbf3a]",
-    details: "Rừng thông lấp lánh nấm thần...",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAGRMABwkcsNkB6cazPtEcY1MX0pbhEmErC97ndL66vIF_w8XhjN92ddO9pmQQy1Yjwg2vmPFnUuLAcGrSalN7sXtAGIElJ2IEq-sgt0GCdFg-fuZ1ge0gwHOo1ekNG0XpUkZIFV29AgYsK5GPpSta_0wzRKgyTn4Idr8yaj9nXTmgqRZ1NrrRh4RKK9-vSuSkNdc8k_DxtQVBNy4woQ2F38eLkTrZm4PE76wiYJjidBsh061GFgL7aneO73JddATNBuSoYpMqQrmyP"
+    details: "Tạo kịch bản truyện..."
   },
   {
-    id: "n-slide",
-    type: "slide",
-    label: "Ghép slide",
+    id: "n-scene-character",
+    type: "scene-character",
+    label: "Cảnh & Nhân vật",
+    icon: "landscape",
+    colorClass: "bg-[#4bafff] text-white",
+    bgColorClass: "bg-[#4bafff]/10",
+    borderColorClass: "border-[#4bafff]",
+    details: "Bối cảnh & Mascot..."
+  },
+  {
+    id: "n-voice",
+    type: "voice",
+    label: "Tạo Voice",
+    icon: "mic",
+    colorClass: "bg-[#C792E0] text-white",
+    bgColorClass: "bg-[#C792E0]/15",
+    borderColorClass: "border-[#C792E0]",
+    details: "Giọng đọc, ngữ điệu..."
+  },
+  {
+    id: "n-video",
+    type: "video",
+    label: "Tạo Video",
     icon: "view_carousel",
     colorClass: "bg-[#FF9F40] text-white",
     bgColorClass: "bg-[#FF9F40]/15",
     borderColorClass: "border-[#FF9F40]",
-    details: "3 trang slide tương tác"
+    details: "Ghép khớp slide phim..."
   },
   {
     id: "n-export",
@@ -247,6 +266,6 @@ export const INITIAL_NODES: WorkflowNode[] = [
     colorClass: "bg-[#dba110] text-white",
     bgColorClass: "bg-[#dba110]/15",
     borderColorClass: "border-[#dba110]",
-    details: "Tải MP4 FullHD (1080p)"
+    details: "Tải MP4 FullHD..."
   }
 ];

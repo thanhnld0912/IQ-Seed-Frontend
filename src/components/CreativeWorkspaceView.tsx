@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Sparkles, LayoutGrid, Clock, ChevronDown, Wand2, Star, Play, CheckCircle, Flame, Download, Mic, GitFork, Upload } from "lucide-react";
-import { STYLES, VOICES } from "../data";
+import { Sparkles, LayoutGrid, Clock, ChevronDown, Wand2, Star, Play, CheckCircle, Flame, Download, Mic, GitFork, Upload, ChevronRight } from "lucide-react";
+import { STYLES } from "../data";
 import { VideoItem } from "../types";
 import { useAuth } from "../context/AuthContext";
 
@@ -16,7 +16,6 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
   const [selectedStyle, setSelectedStyle] = useState("anime");
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [duration, setDuration] = useState(30);
-  const [selectedVoice, setSelectedVoice] = useState("bena");
   
   // API generation state
   const [isExpanding, setIsExpanding] = useState(false);
@@ -33,6 +32,10 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
   const [isPlaying, setIsPlaying] = useState(false);
 
   const handleImportNotebookLM = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isAuthenticated) {
+      onNavigate("login");
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -187,7 +190,6 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
     };
 
     reader.readAsText(file);
-    // Reset file input value to allow importing the same file again
     e.target.value = "";
   };
 
@@ -215,9 +217,6 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
       if (response.ok) {
         setPrompt(data.script || data.prompt);
         setStoryTitle(data.title || "Câu chuyện kỳ diệu");
-        if (data.isMock) {
-          console.log("fallback mock expanded script triggered successfully.");
-        }
       } else {
         alert("Lỗi từ máy chủ: " + (data.error || "Không thể gọi AI"));
       }
@@ -282,7 +281,7 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
               aspectRatio: aspectRatio,
               status: "completed",
               progress: 100,
-              voiceId: selectedVoice,
+              voiceId: "bena",
               coverImage: coverImg,
               expirationDaysLeft: 7
             };
@@ -301,7 +300,7 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
       }, 250);
     }
     return () => clearInterval(interval);
-  }, [isRendering, duration, selectedStyle, selectedVoice, aspectRatio, prompt, storyTitle]);
+  }, [isRendering, duration, selectedStyle, aspectRatio, prompt, storyTitle]);
 
   return (
     <div className="min-h-screen bg-[#FFFDF7] pb-24 md:pb-12 pt-10">
@@ -310,10 +309,10 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
         {/* Banner Title */}
         <div className="text-center md:text-left space-y-2">
           <h1 className="text-3xl md:text-4xl font-extrabold text-[#2d6c00] font-heading flex items-center justify-center md:justify-start gap-2">
-            🌱 Khu Vườn Sáng Tạo Video
+            🌱 Chuẩn Bị Nội Dung & Slide Câu Chuyện
           </h1>
           <p className="text-on-surface-variant font-medium text-sm md:text-base">
-            Gieo hạt mầm ý tưởng, chờ đợi giây lát để nhận tác phẩm hoạt họa tuyệt vời của con!
+            Trang này giúp ba mẹ chuẩn bị nội dung câu chuyện và các slide trước khi bắt đầu quy trình workflow hoàn thiện.
           </p>
         </div>
 
@@ -322,32 +321,79 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
           {/* LEFT: CONTROLS */}
           <div className="lg:col-span-7 space-y-6">
             
-            {/* Main Prompt Input */}
-            <div className="bg-white p-6 rounded-3xl shadow-[0_16px_32px_rgba(217,179,140,0.15)] border-2 border-surface-container relative group">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+            {/* Primary Workflow: NotebookLM Slide Import Card */}
+            <div className="bg-white p-6 rounded-3xl shadow-[0_16px_32px_rgba(217,179,140,0.15)] border-2 border-[#2d6c00]/30 relative group space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="bg-[#2d6c00]/15 text-[#2d6c00] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">Khuyên Dùng</span>
                 <h2 className="font-heading text-xl text-primary font-black">
-                  Kể cho mình nghe câu chuyện của bé nhé!
+                  Cách 1: Nhập Slide Từ NotebookLM
                 </h2>
-                <div className="flex items-center gap-2">
-                  <label className="cursor-pointer px-4 py-1.5 bg-[#4bafff]/10 hover:bg-[#4bafff]/25 text-[#004a77] text-xs font-black rounded-full transition-all border border-[#4bafff]/20 flex items-center gap-1.5 shadow-sm">
-                    <Upload className="w-3.5 h-3.5 text-[#004a77]" />
-                    <span>Import NotebookLM</span>
-                    <input
-                      type="file"
-                      accept=".txt,.md,.json"
-                      onChange={handleImportNotebookLM}
-                      className="hidden"
-                    />
-                  </label>
+              </div>
+              
+              <p className="text-xs text-on-surface-variant leading-relaxed">
+                <strong>Google NotebookLM</strong> là công cụ AI ghi chú thông minh giúp ba mẹ biên tập câu chuyện, giáo án nhanh chóng. Ba mẹ chỉ cần xuất bản ghi chú dạng văn bản rồi nhập vào đây để Hạt Giống IQ tự động chia slide.
+              </p>
+
+              {/* Explanatory instruction list */}
+              <div className="bg-[#fcfbf9] border border-surface-container rounded-2xl p-4 text-xs space-y-2 text-[#404a39]">
+                <div className="flex items-start gap-2">
+                  <span className="font-bold text-[#2d6c00]">1.</span>
+                  <p>Truy cập NotebookLM và tải xuống/sao chép ghi chú câu chuyện của bé dưới dạng tệp tin văn bản.</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-bold text-[#2d6c00]">2.</span>
+                  <p>Hỗ trợ xuất các định dạng: <strong>.txt, .md, .json</strong>.</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-bold text-[#2d6c00]">3.</span>
+                  <p>Hạt Giống IQ sẽ tự động tách nội dung thành từng slide tương tác có bố cục rõ ràng.</p>
                 </div>
               </div>
+
+              {/* Step progression diagram */}
+              <div className="flex justify-between items-center text-[10px] font-black text-outline bg-surface-container/30 px-3 py-2 rounded-xl border border-surface-container">
+                <span>Google NotebookLM</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+                <span>Xuất Slide (.txt/.json)</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+                <span>Nhập vào Hạt Giống IQ</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+                <span>Chỉnh sửa Workflow</span>
+              </div>
+
+              {/* Dropzone Upload Button */}
+              <label className="cursor-pointer border-2 border-dashed border-[#4bafff] hover:border-[#00639c] bg-[#4bafff]/5 hover:bg-[#4bafff]/15 transition-all p-6 rounded-2xl flex flex-col items-center justify-center text-center gap-2 shadow-inner group">
+                <Upload className="w-8 h-8 text-[#00639c] group-hover:scale-110 transition-transform animate-pulse" />
+                <span className="text-xs font-black text-[#004a77]">Chọn tệp từ máy tính (.txt, .md, .json)</span>
+                <span className="text-[10px] text-outline font-bold">Kéo thả tệp hoặc click tại đây để tải slide</span>
+                <input
+                  type="file"
+                  accept=".txt,.md,.json"
+                  onChange={handleImportNotebookLM}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            {/* Divider/Label for alternative path */}
+            <div className="flex items-center gap-4 py-2">
+              <div className="h-0.5 bg-surface-container flex-grow"></div>
+              <span className="text-xs font-black text-outline uppercase tracking-wider">Hoặc tự soạn thảo câu chuyện thủ công</span>
+              <div className="h-0.5 bg-surface-container flex-grow"></div>
+            </div>
+
+            {/* Alternative Workflow: Manual Content Creation Options Card */}
+            <div className="bg-white p-6 rounded-3xl shadow-[0_16px_32px_rgba(217,179,140,0.15)] border-2 border-surface-container relative group space-y-4">
+              <h2 className="font-heading text-lg text-on-surface font-black">
+                Cách 2: Xây Dựng Câu Chuyện Thủ Công
+              </h2>
               
               <div className="relative">
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  className="w-full h-44 p-4 bg-[#FFFDF7] border-2 border-outline-variant rounded-2xl focus:ring-4 focus:ring-primary-container/20 focus:border-primary outline-none transition-all resize-none font-sans text-base text-on-surface"
-                  placeholder="Ví dụ: Một chú hạt giống nhỏ đi phiêu lưu khắp rừng già để tìm kiếm kho báu trí tuệ..."
+                  className="w-full h-40 p-4 bg-[#FFFDF7] border-2 border-outline-variant rounded-2xl focus:ring-4 focus:ring-primary-container/20 focus:border-primary outline-none transition-all resize-none font-sans text-base text-on-surface"
+                  placeholder="Ví dụ: [Cảnh 1] Một chú hạt giống nhỏ đi tìm kiếm kho báu trí tuệ... [Cảnh 2] ..."
                 />
                 
                 <div className="absolute bottom-3 right-3 flex items-center gap-3">
@@ -366,7 +412,7 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
               </div>
 
               {/* Suggestions */}
-              <div className="pt-4 flex flex-wrap gap-2 items-center">
+              <div className="flex flex-wrap gap-2 items-center">
                 <span className="text-xs text-on-surface-variant font-extrabold uppercase">Gợi ý chủ đề:</span>
                 <button
                   onClick={() => handleSelectSuggestion("Chú rùa già thông thái kể chuyện đại dương xanh bảo vệ san hô")}
@@ -457,7 +503,7 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
               {/* Duration Setting */}
               <div className="bg-white p-5 rounded-3xl shadow-sm border border-surface-container space-y-3">
                 <label className="text-xs font-extrabold text-on-surface-variant flex items-center gap-2 uppercase tracking-wide">
-                  <Clock className="w-4.5 h-4.5 text-[#2d6c00]" /> Thời lượng video
+                  <Clock className="w-4.5 h-4.5 text-[#2d6c00]" /> Thời lượng trình chiếu
                 </label>
                 <div className="pt-2">
                   <input
@@ -478,36 +524,6 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
               </div>
             </div>
 
-            {/* Narrator selector */}
-            <div className="bg-white p-5 rounded-3xl shadow-sm border border-surface-container flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-surface-container-low border border-outline-variant">
-                  <img
-                    src={VOICES.find(v => v.id === selectedVoice)?.avatarUrl}
-                    alt="Voice avatar"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div>
-                  <h4 className="text-sm font-extrabold">Giọng đọc kể chuyện hủ hỉ</h4>
-                  <p className="text-xs text-outline font-bold">
-                    {VOICES.find(v => v.id === selectedVoice)?.name} - Tiếng Việt ({VOICES.find(v => v.id === selectedVoice)?.region})
-                  </p>
-                </div>
-              </div>
-              <div className="relative">
-                <select
-                  value={selectedVoice}
-                  onChange={(e) => setSelectedVoice(e.target.value)}
-                  className="py-1 px-4 border border-outline rounded-full font-bold text-xs bg-white text-on-surface shadow-sm focus:ring-2 focus:ring-[#2d6c00] outline-none"
-                >
-                  {VOICES.map(voice => (
-                    <option key={voice.id} value={voice.id}>{voice.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
             {/* CTA Generate Buttons */}
             <div className="space-y-3">
               <button
@@ -515,11 +531,11 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
                 disabled={isRendering || isExpanding}
                 className="w-full py-5 bg-gradient-to-r from-[#F5B82E] to-[#FF9F40] text-white rounded-full font-extrabold text-xl button-3d-yellow flex items-center justify-center gap-3 cursor-pointer shadow-lg hover:brightness-105"
               >
-                <span>✨ Tạo video mầm non AI ngay</span>
+                <span>✨ Hoàn tất chuẩn bị slide kịch bản</span>
               </button>
               <div className="flex items-center justify-center gap-2 text-on-surface-variant font-extrabold text-xs">
                 <Star className="w-4.5 h-4.5 text-[#dba110] fill-[#dba110]" />
-                <span>Bé còn 12 lượt gieo hạt giống miễn phí hôm nay</span>
+                <span>Bé còn 12 lượt tạo slide kịch bản miễn phí hôm nay</span>
               </div>
             </div>
 
@@ -539,9 +555,9 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
                       <span className="text-7xl">🎬</span>
                     </div>
                     <div className="space-y-2">
-                      <h3 className="font-heading text-lg font-black text-[#2d6c00]">Phòng gieo hạt giống đã sẵn sàng</h3>
+                      <h3 className="font-heading text-lg font-black text-[#2d6c00]">Phòng tạo slide câu chuyện đã sẵn sàng</h3>
                       <p className="text-sm font-medium text-on-surface-variant max-w-xs mx-auto">
-                        Nhấn nút màu cam để biến câu chuyện cổ tích mong ước của bé thành rạp chiếu phim mượt mà.
+                        Nhấn nút màu cam để biến câu chuyện của bé thành các slide sinh động.
                       </p>
                     </div>
                   </div>
@@ -555,7 +571,7 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
                     </div>
 
                     <div className="space-y-4">
-                      <h3 className="font-heading text-lg font-black text-[#2d6c00]">Đang gieo hạt giống sáng tạo...</h3>
+                      <h3 className="font-heading text-lg font-black text-[#2d6c00]">Đang tạo slide kịch bản câu chuyện...</h3>
                       
                       {/* Workflow indicators */}
                       <div className="flex justify-between items-center w-full px-4 relative max-w-sm mx-auto">
@@ -622,10 +638,10 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
                     <div className="space-y-1">
                       <div className="inline-flex items-center gap-1.5 bg-[#6bbf3a]/15 text-[#2d6c00] px-3 py-1 rounded-full text-xs font-bold">
                         <CheckCircle className="w-3.5 h-3.5 fill-[#2d6c00] text-white" />
-                        Gieo hạt video thành công!
+                        Tạo slide câu chuyện thành công!
                       </div>
                       <h3 className="font-heading text-lg font-black text-on-surface">{renderedVideo.title}</h3>
-                      <p className="text-xs text-outline">{renderedVideo.style} • {renderedVideo.duration}s • Giọng {VOICES.find(v => v.id === selectedVoice)?.name}</p>
+                      <p className="text-xs text-outline">{renderedVideo.style} • {renderedVideo.aspectRatio}</p>
                     </div>
 
                     {/* Actions Panel */}
@@ -634,7 +650,7 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
                         onClick={() => alert("Đã mở lệnh tải xuống file MP4 chất lượng cao cho bé!")}
                         className="flex flex-col items-center gap-1 text-xs font-bold text-[#2d6c00] bg-[#6bbf3a]/10 p-2.5 rounded-xl hover:bg-[#6bbf3a]/20"
                       >
-                        <Download className="w-5 h-5" /> Tải về
+                        <Download className="w-5 h-5" /> Tải slide/video
                       </button>
                       <button
                         onClick={() => onNavigate("voice")}
@@ -646,7 +662,7 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
                         onClick={() => onNavigate("workflow")}
                         className="flex flex-col items-center gap-1 text-xs font-bold text-[#7b5800] bg-[#ffdea5]/50 p-2.5 rounded-xl hover:bg-[#ffdea5]/70"
                       >
-                        <GitFork className="w-5 h-5" /> Mở workflow
+                        <GitFork className="w-5 h-5" /> Mở Workflow slide
                       </button>
                     </div>
                   </div>
