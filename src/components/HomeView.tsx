@@ -73,7 +73,7 @@ export default function HomeView({ onNavigate, onPlaySampleVideo }: HomeViewProp
                     <div className="w-6 h-6 bg-[#1b1c19] rounded-full"></div>
                     <div className="w-6 h-6 bg-on-surface rounded-full"></div>
                   </div>
-                  <div class="w-14 h-4 bg-transparent border-b-4 border-[#1b1c19] rounded-full"></div>
+                  <div className="w-14 h-4 bg-transparent border-b-4 border-[#1b1c19] rounded-full"></div>
                 </div>
 
                 {/* Magnifying Glass badge */}
@@ -107,36 +107,36 @@ export default function HomeView({ onNavigate, onPlaySampleVideo }: HomeViewProp
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="bg-[#fbf9f3] p-8 rounded-2xl shadow-sm hover:shadow-xl transition-all border-t-8 border-[#2d6c00] group flex flex-col justify-between">
               <div>
-                <div class="w-14 h-14 bg-[#2d6c00]/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform text-primary font-bold">
+                <div className="w-14 h-14 bg-[#2d6c00]/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform text-primary font-bold">
                   🎭
                 </div>
-                <h3 class="font-heading text-lg font-bold text-on-surface mb-2">Tạo video AI</h3>
-                <p class="text-sm text-on-surface-variant font-medium">Chỉ cần nhập kịch bản, AI sẽ tự động tạo hình ảnh và chuyển động mượt mà.</p>
+                <h3 className="font-heading text-lg font-bold text-on-surface mb-2">Tạo video AI</h3>
+                <p className="text-sm text-on-surface-variant font-medium">Chỉ cần nhập kịch bản, AI sẽ tự động tạo hình ảnh và chuyển động mượt mà.</p>
               </div>
             </div>
 
-            <div class="bg-white p-8 rounded-lg shadow-sm hover:shadow-xl transition-all border-t-8 border-secondary group">
-              <div class="w-16 h-16 bg-[#cfe5ff] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform text-secondary">
+            <div className="bg-white p-8 rounded-lg shadow-sm hover:shadow-xl transition-all border-t-8 border-secondary group">
+              <div className="w-16 h-16 bg-[#cfe5ff] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform text-secondary">
                 🎙️
               </div>
-              <h3 class="font-heading text-lg font-bold text-on-surface mb-2">Ghép giọng tự nhiên</h3>
-              <p class="text-sm text-on-surface-variant font-medium">Thư viện giọng đọc truyền cảm, ấm áp, phù hợp với tâm lý trẻ em Việt Nam.</p>
+              <h3 className="font-heading text-lg font-bold text-on-surface mb-2">Ghép giọng tự nhiên</h3>
+              <p className="text-sm text-on-surface-variant font-medium">Thư viện giọng đọc truyền cảm, ấm áp, phù hợp với tâm lý trẻ em Việt Nam.</p>
             </div>
 
-            <div class="bg-white p-8 rounded-lg shadow-sm hover:shadow-xl transition-all border-t-8 border-[#dba110] group">
-              <div class="w-16 h-16 bg-[#ffdea5] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform text-[#dba110]">
+            <div className="bg-white p-8 rounded-lg shadow-sm hover:shadow-xl transition-all border-t-8 border-[#dba110] group">
+              <div className="w-16 h-16 bg-[#ffdea5] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform text-[#dba110]">
                 🌿
               </div>
-              <h3 class="font-heading text-lg font-bold text-on-surface mb-2">Kéo-thả workflow</h3>
-              <p class="text-sm text-on-surface-variant font-medium">Giao diện đơn giản đến mức các bé cũng có thể tham gia sáng tạo cùng ba mẹ.</p>
+              <h3 className="font-heading text-lg font-bold text-on-surface mb-2">Kéo-thả workflow</h3>
+              <p className="text-sm text-on-surface-variant font-medium">Giao diện đơn giản đến mức các bé cũng có thể tham gia sáng tạo cùng ba mẹ.</p>
             </div>
 
-            <div class="bg-white p-8 rounded-lg shadow-sm hover:shadow-xl transition-all border-t-8 border-[#6bbf3a] group">
-              <div class="w-16 h-16 bg-[#6bbf3a]/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform text-[#6bbf3a]">
+            <div className="bg-white p-8 rounded-lg shadow-sm hover:shadow-xl transition-all border-t-8 border-[#6bbf3a] group">
+              <div className="w-16 h-16 bg-[#6bbf3a]/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform text-[#6bbf3a]">
                 📐
               </div>
-              <h3 class="font-heading text-lg font-bold text-on-surface mb-2">Tạo slide bài học</h3>
-              <p class="text-sm text-on-surface-variant font-medium">Xuất video thành các slide tương tác tiện lợi cho giáo án điện tử mầm non.</p>
+              <h3 className="font-heading text-lg font-bold text-on-surface mb-2">Tạo slide bài học</h3>
+              <p className="text-sm text-on-surface-variant font-medium">Xuất video thành các slide tương tác tiện lợi cho giáo án điện tử mầm non.</p>
             </div>
           </div>
         </div>
@@ -279,31 +279,31 @@ export default function HomeView({ onNavigate, onPlaySampleVideo }: HomeViewProp
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="col-span-1 md:col-span-2 space-y-4">
             <div className="text-2xl font-extrabold font-heading tracking-tight flex items-center gap-2">
-              <span class="material-icons text-primary-fixed">eco</span> Hạt Giống IQ
+              <span className="material-icons text-primary-fixed">eco</span> Hạt Giống IQ
             </div>
-            <p class="text-white/80 max-w-sm text-sm">
+            <p className="text-white/80 max-w-sm text-sm">
               Ươm mầm sáng tạo và trí tưởng tượng cho thế hệ tương lai thông qua sức mạnh cách mạng của trí tuệ nhân tạo và tình cảm bao la.
             </p>
           </div>
           <div>
-            <h4 class="font-bold font-heading text-sm mb-4 uppercase tracking-wider">Khám phá</h4>
-            <ul class="space-y-2 text-sm text-white/80">
+            <h4 className="font-bold font-heading text-sm mb-4 uppercase tracking-wider">Khám phá</h4>
+            <ul className="space-y-2 text-sm text-white/80">
               <li><a href="#" className="hover:text-white hover:underline">Về chúng tôi</a></li>
-              <li><a class="hover:text-on-primary-container hover:underline" href="#" onClick={(e) => { e.preventDefault(); onNavigate('voice'); }}>Chơi thử lồng tiếng</a></li>
-              <li><a class="text-white/80 hover:text-white" href="#" onClick={(e) => { e.preventDefault(); alert("Hạt Giống IQ đã tích hợp trực tiếp!"); }}>Hướng dẫn mầm non</a></li>
-              <li><a class="text-white/80 hover:text-on-primary-container hover:underline" href="#">Bảng học phí</a></li>
+              <li><a className="hover:text-on-primary-container hover:underline" href="#" onClick={(e) => { e.preventDefault(); onNavigate('voice'); }}>Chơi thử lồng tiếng</a></li>
+              <li><a className="text-white/80 hover:text-white" href="#" onClick={(e) => { e.preventDefault(); alert("Hạt Giống IQ đã tích hợp trực tiếp!"); }}>Hướng dẫn mầm non</a></li>
+              <li><a className="text-white/80 hover:text-on-primary-container hover:underline" href="#">Bảng học phí</a></li>
             </ul>
           </div>
           <div>
-            <h4 class="font-bold font-label-lg mb-4 uppercase tracking-wider">Hỗ trợ</h4>
-            <ul class="space-y-4 text-sm">
-              <li><a class="text-white/80 hover:text-white hover:underline" href="#">Điều khoản sử dụng</a></li>
-              <li><a class="text-on-primary-container/80 hover:text-on-primary-container hover:underline" href="#">Chính sách bảo mật</a></li>
-              <li><a class="text-on-primary-container/80 hover:text-on-primary-container hover:underline" href="#">Góp ý / Liên hệ</a></li>
+            <h4 className="font-bold font-label-lg mb-4 uppercase tracking-wider">Hỗ trợ</h4>
+            <ul className="space-y-4 text-sm">
+              <li><a className="text-white/80 hover:text-white hover:underline" href="#">Điều khoản sử dụng</a></li>
+              <li><a className="text-on-primary-container/80 hover:text-on-primary-container hover:underline" href="#">Chính sách bảo mật</a></li>
+              <li><a className="text-on-primary-container/80 hover:text-on-primary-container hover:underline" href="#">Góp ý / Liên hệ</a></li>
             </ul>
           </div>
         </div>
-        <div class="max-w-7xl mx-auto mt-16 pt-8 border-t border-white/10 text-center text-sm text-white/60">
+        <div className="max-w-7xl mx-auto mt-16 pt-8 border-t border-white/10 text-center text-sm text-white/60">
           <p>© 2026 Hạt Giống IQ - Ươm mầm sáng tạo mầm non Việt</p>
         </div>
       </footer>

@@ -27,7 +27,7 @@ import LoginView from "./components/LoginView";
 import RegisterView from "./components/RegisterView";
 import ManageUsersView from "./components/ManageUsersView";
 
-const PROTECTED_TABS = ["library", "voice", "dashboard", "manage-users"];
+const PROTECTED_TABS = ["voice", "manage-users"];
 
 export default function App() {
   const { user, isAuthenticated, logout, loading } = useAuth();
@@ -64,6 +64,10 @@ export default function App() {
   };
 
   const handleDeleteVideo = (id: string) => {
+    if (!isAuthenticated) {
+      navigateTo("login");
+      return;
+    }
     if (confirm("Bạn có chắc muốn xóa tác phẩm này?")) {
       const updated = videos.filter((v) => v.id !== id);
       setVideos(updated);
@@ -196,11 +200,11 @@ export default function App() {
             {currentTab === "workflow" && (
               <EditWorkflowView onNavigate={navigateTo} />
             )}
-            {currentTab === "library" && isAuthenticated && (
+            {currentTab === "library" && (
               <TemplateLibraryView onSelectTemplate={handleSelectTemplateAndGo} />
             )}
             {currentTab === "voice" && isAuthenticated && <VoiceOverView />}
-            {currentTab === "dashboard" && isAuthenticated && (
+            {currentTab === "dashboard" && (
               <DashboardView
                 videos={videos}
                 onPlayVideo={handlePlaySampleVideo}

@@ -44,7 +44,7 @@ export interface StyleItem {
 
 export interface WorkflowNode {
   id: string;
-  type: 'scene' | 'voice' | 'music' | 'slide' | 'export';
+  type: 'script' | 'scene-character' | 'voice' | 'video' | 'export';
   label: string;
   icon: string;
   colorClass: string;
