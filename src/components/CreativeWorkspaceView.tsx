@@ -1,6 +1,32 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Sparkles, LayoutGrid, Clock, ChevronDown, Wand2, Star, Play, CheckCircle, Flame, Download, Mic, GitFork, Upload, ChevronRight } from "lucide-react";
+import { 
+  Sparkles, 
+  LayoutGrid, 
+  Clock, 
+  ChevronDown, 
+  Wand2, 
+  Star, 
+  Play, 
+  CheckCircle, 
+  Flame, 
+  Download, 
+  Mic, 
+  GitFork, 
+  Upload, 
+  ChevronRight, 
+  Plus, 
+  Trash2, 
+  Copy, 
+  AlignLeft, 
+  AlignCenter, 
+  AlignRight, 
+  Bold, 
+  Italic, 
+  Palette, 
+  ChevronLeft, 
+  ChevronUp 
+} from "lucide-react";
 import { STYLES } from "../data";
 import { VideoItem } from "../types";
 import { useAuth } from "../context/AuthContext";
@@ -10,16 +36,51 @@ interface CreativeWorkspaceViewProps {
   onNavigate: (tab: string) => void;
 }
 
+interface Slide {
+  id: string;
+  title: string;
+  content: string;
+  backgroundColor: string;
+  textColor: string;
+  textAlign: 'left' | 'center' | 'right';
+  isBold: boolean;
+  isItalic: boolean;
+  gradientPreset?: string;
+}
+
 export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: CreativeWorkspaceViewProps) {
   const { isAuthenticated } = useAuth();
-  const [prompt, setPrompt] = useState("");
+  const [slides, setSlides] = useState<Slide[]>([
+    {
+      id: "slide-1",
+      title: "Cảnh 1: Hạt mầm bé nhỏ",
+      content: "Một chú hạt giống nhỏ bé nằm ngoan dưới lòng đất ấm áp, đón nhận giọt sương lành.",
+      backgroundColor: "#FFFDF7",
+      textColor: "#1b1c19",
+      textAlign: "center",
+      isBold: true,
+      isItalic: false,
+      gradientPreset: "bg-gradient-to-tr from-[#ffecd2] to-[#fcb69f]"
+    },
+    {
+      id: "slide-2",
+      title: "Cảnh 2: Ánh dương chiếu rọi",
+      content: "Ánh mặt trời vàng óng sưởi ấm giúp hạt giống vươn vai mọc mầm non xinh tươi.",
+      backgroundColor: "#cfe5ff",
+      textColor: "#004a77",
+      textAlign: "center",
+      isBold: false,
+      isItalic: false,
+      gradientPreset: "bg-gradient-to-tr from-[#a1c4fd] to-[#c2e9fb]"
+    }
+  ]);
+  const [activeSlideId, setActiveSlideId] = useState<string>("slide-1");
   const [selectedStyle, setSelectedStyle] = useState("anime");
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [duration, setDuration] = useState(30);
-  
+
   // API generation state
   const [isExpanding, setIsExpanding] = useState(false);
-  const [expandedText, setExpandedText] = useState("");
   const [storyTitle, setStoryTitle] = useState("");
 
   // Rendering state
@@ -30,6 +91,8 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
 
   // Playback state
   const [isPlaying, setIsPlaying] = useState(false);
+
+  const activeSlide = slides.find(s => s.id === activeSlideId) || slides[0];
 
   const handleImportNotebookLM = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isAuthenticated) {
@@ -46,12 +109,11 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
 
       try {
         if (file.name.endsWith(".json")) {
-          // Parse JSON
           const data = JSON.parse(content);
-          let slides: Array<{ title?: string; content?: string }> = [];
+          let rawSlides: Array<{ title?: string; content?: string }> = [];
 
           if (Array.isArray(data)) {
-            slides = data.map((item: any) => {
+            rawSlides = data.map((item: any) => {
               if (typeof item === 'string') {
                 return { content: item };
               } else if (item && typeof item === 'object') {
@@ -65,7 +127,7 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
           } else if (data && typeof data === 'object') {
             const possibleArray = data.slides || data.scenes || data.notes || data.items || data.data;
             if (Array.isArray(possibleArray)) {
-              slides = possibleArray.map((item: any) => {
+              rawSlides = possibleArray.map((item: any) => {
                 if (typeof item === 'string') {
                   return { content: item };
                 } else if (item && typeof item === 'object') {
@@ -77,34 +139,36 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
                 return {};
               }).filter((item: any) => item.title || item.content);
             } else {
-              // Single object with key-value pairs or other shapes
-              slides = Object.keys(data).map(key => ({
+              rawSlides = Object.keys(data).map(key => ({
                 title: key,
                 content: typeof data[key] === 'string' ? data[key] : JSON.stringify(data[key])
               }));
             }
           }
 
-          if (slides.length === 0) {
+          if (rawSlides.length === 0) {
             alert("Tệp JSON không chứa danh sách slide hợp lệ!");
             return;
           }
 
-          // Convert to internal format
-          let formattedScript = "";
-          slides.forEach((slide, idx) => {
-            const displayTitle = slide.title ? `: ${slide.title}` : "";
-            formattedScript += `[Cảnh ${idx + 1}${displayTitle}]\n${slide.content || ""}\n\n`;
-          });
-          formattedScript = formattedScript.trim();
-
-          setPrompt(formattedScript);
+          const parsed = rawSlides.map((s, idx) => ({
+            id: `slide-${Date.now()}-${idx}`,
+            title: s.title || `Cảnh ${idx + 1}`,
+            content: s.content || "",
+            backgroundColor: idx % 2 === 0 ? "#FFFDF7" : "#cfe5ff",
+            textColor: idx % 2 === 0 ? "#1b1c19" : "#004a77",
+            textAlign: "center" as const,
+            isBold: false,
+            isItalic: false,
+            gradientPreset: idx % 2 === 0 ? "bg-gradient-to-tr from-[#ffecd2] to-[#fcb69f]" : "bg-gradient-to-tr from-[#a1c4fd] to-[#c2e9fb]"
+          }));
+          setSlides(parsed);
+          setActiveSlideId(parsed[0].id);
           setStoryTitle(file.name.replace(/\.[^/.]+$/, ""));
-          alert(`Đã nhập thành công ${slides.length} slide từ tệp JSON!`);
+          alert(`Đã nhập thành công ${parsed.length} slide từ tệp JSON!`);
         } else {
-          // Parse Text/Markdown (.txt, .md)
           const lines = content.split("\n");
-          const slides: Array<{ title: string; bodyLines: string[] }> = [];
+          const parsedList: Array<{ title: string; bodyLines: string[] }> = [];
           let currentSlideTitle = "";
           let currentSlideBody: string[] = [];
 
@@ -116,21 +180,18 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
 
             const match = line.match(slideMarkerRegex);
             if (match) {
-              // Start of a new slide
               if (currentSlideTitle || currentSlideBody.length > 0) {
-                slides.push({
-                  title: currentSlideTitle || `Cảnh ${slides.length + 1}`,
+                parsedList.push({
+                  title: currentSlideTitle || `Cảnh ${parsedList.length + 1}`,
                   bodyLines: currentSlideBody
                 });
               }
-              // Set new slide details
               const titlePart = match[2]?.trim();
               const numPart = match[1];
               currentSlideTitle = titlePart || (numPart ? `Cảnh ${numPart}` : "");
               currentSlideBody = [];
             } else {
               if (currentSlideTitle === "" && currentSlideBody.length === 0) {
-                // If text starts without slide heading, use first non-empty line as title
                 currentSlideTitle = trimmed;
               } else {
                 currentSlideBody.push(trimmed);
@@ -138,22 +199,19 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
             }
           });
 
-          // Push the last slide
           if (currentSlideTitle || currentSlideBody.length > 0) {
-            slides.push({
-              title: currentSlideTitle || `Cảnh ${slides.length + 1}`,
+            parsedList.push({
+              title: currentSlideTitle || `Cảnh ${parsedList.length + 1}`,
               bodyLines: currentSlideBody
             });
           }
 
-          // Fallback if no clear slides/headers were parsed
-          if (slides.length === 0) {
-            // Split by double newline paragraphs
+          if (parsedList.length === 0) {
             const paragraphs = content.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
-            paragraphs.forEach((p, idx) => {
+            paragraphs.forEach((p) => {
               const linesOfP = p.split("\n").map(l => l.trim()).filter(Boolean);
               if (linesOfP.length > 0) {
-                slides.push({
+                parsedList.push({
                   title: linesOfP[0],
                   bodyLines: linesOfP.slice(1)
                 });
@@ -161,23 +219,26 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
             });
           }
 
-          if (slides.length === 0) {
+          if (parsedList.length === 0) {
             alert("Tệp văn bản trống hoặc không thể phân tích nội dung!");
             return;
           }
 
-          // Convert to internal format
-          let formattedScript = "";
-          slides.forEach((slide, idx) => {
-            const displayTitle = slide.title ? `: ${slide.title}` : "";
-            const bodyText = slide.bodyLines.join("\n");
-            formattedScript += `[Cảnh ${idx + 1}${displayTitle}]\n${bodyText}\n\n`;
-          });
-          formattedScript = formattedScript.trim();
-
-          setPrompt(formattedScript);
+          const parsed = parsedList.map((slide, idx) => ({
+            id: `slide-${Date.now()}-${idx}`,
+            title: slide.title || `Cảnh ${idx + 1}`,
+            content: slide.bodyLines.join("\n"),
+            backgroundColor: idx % 2 === 0 ? "#FFFDF7" : "#cfe5ff",
+            textColor: idx % 2 === 0 ? "#1b1c19" : "#004a77",
+            textAlign: "center" as const,
+            isBold: false,
+            isItalic: false,
+            gradientPreset: idx % 2 === 0 ? "bg-gradient-to-tr from-[#ffecd2] to-[#fcb69f]" : "bg-gradient-to-tr from-[#a1c4fd] to-[#c2e9fb]"
+          }));
+          setSlides(parsed);
+          setActiveSlideId(parsed[0].id);
           setStoryTitle(file.name.replace(/\.[^/.]+$/, ""));
-          alert(`Đã nhập thành công ${slides.length} cảnh từ tài liệu NotebookLM!`);
+          alert(`Đã nhập thành công ${parsed.length} cảnh từ tài liệu NotebookLM!`);
         }
       } catch (err) {
         console.error(err);
@@ -193,14 +254,13 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
     e.target.value = "";
   };
 
-  // Magic API expand prompt callback
   const handleAIExpand = async () => {
     if (!isAuthenticated) {
       onNavigate("login");
       return;
     }
-    if (!prompt.trim()) {
-      alert("Vui lòng gõ một vài từ khóa hoặc ý tưởng trước nhé!");
+    if (!activeSlide.content.trim()) {
+      alert("Vui lòng gõ một vài từ khóa hoặc ý tưởng vào slide trước nhé!");
       return;
     }
     setIsExpanding(true);
@@ -209,43 +269,125 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userPrompt: prompt,
+          userPrompt: activeSlide.content,
           style: STYLES.find(s => s.id === selectedStyle)?.name || "3D Clay"
         })
       });
       const data = await response.json();
       if (response.ok) {
-        setPrompt(data.script || data.prompt);
-        setStoryTitle(data.title || "Câu chuyện kỳ diệu");
+        const updated = slides.map(s => {
+          if (s.id === activeSlideId) {
+            return { ...s, content: data.script || data.prompt };
+          }
+          return s;
+        });
+        setSlides(updated);
       } else {
         alert("Lỗi từ máy chủ: " + (data.error || "Không thể gọi AI"));
       }
     } catch (err) {
       console.error(err);
-      // Fallback locally
-      setPrompt(`[Cảnh 1] Một chú hạt giống nhỏ ${prompt} trong khu rừng hạnh phúc. Chú gieo mình xuống lòng đất ẩm mát.
-[Cảnh 2] Những giọt sương mai dịu dàng tí tách tưới mát cho hạt giống.
-[Cảnh 3] Ánh mặt trời vàng óng như mật ong sưởi ấm, giúp hạt mầm tò mò lấp ló vươn vai mọc lên chiếc lá non xinh tươi đầu tiên.
-[Cảnh 4] Cây non phát triển thành đóa hoa thông thái rực rỡ, tỏa hương thơm ngát giúp học tập muôn loài.`);
-      setStoryTitle("Món quà của Hạt Giống nhỏ");
+      const updated = slides.map(s => {
+        if (s.id === activeSlideId) {
+          return {
+            ...s,
+            content: `${s.content}\n\n[Ý tưởng mở rộng] Cảnh vẽ chi tiết bối cảnh xung quanh rực rỡ sắc màu, nhân vật vui vẻ hoạt náo.`
+          };
+        }
+        return s;
+      });
+      setSlides(updated);
     } finally {
       setIsExpanding(false);
     }
   };
 
-  // Pre-seed template suggestions
-  const handleSelectSuggestion = (text: string) => {
-    setPrompt(text);
-  };
-
-  // Simulating video generation
-  const handleCreateVideo = () => {
+  const handleAddSlide = () => {
     if (!isAuthenticated) {
       onNavigate("login");
       return;
     }
-    if (!prompt.trim()) {
-      alert("Hãy nhập kịch bản hoặc ý tưởng câu chuyện mầm non trước khi gieo hạt giống sáng tạo nhé!");
+    const newSlide: Slide = {
+      id: `slide-${Date.now()}`,
+      title: `Cảnh ${slides.length + 1}: Tiêu đề mới`,
+      content: "Nhập nội dung câu chuyện cho cảnh này...",
+      backgroundColor: "#FFFDF7",
+      textColor: "#1b1c19",
+      textAlign: "center",
+      isBold: false,
+      isItalic: false,
+      gradientPreset: "bg-gradient-to-tr from-[#ffecd2] to-[#fcb69f]"
+    };
+    setSlides([...slides, newSlide]);
+    setActiveSlideId(newSlide.id);
+  };
+
+  const handleDeleteSlide = (id: string) => {
+    if (!isAuthenticated) {
+      onNavigate("login");
+      return;
+    }
+    if (slides.length <= 1) {
+      alert("Phải có ít nhất 1 slide trong kịch bản truyện!");
+      return;
+    }
+    const idx = slides.findIndex(s => s.id === id);
+    const updated = slides.filter(s => s.id !== id);
+    setSlides(updated);
+    if (activeSlideId === id) {
+      const nextActive = updated[idx === 0 ? 0 : idx - 1];
+      setActiveSlideId(nextActive.id);
+    }
+  };
+
+  const handleDuplicateSlide = (slide: Slide) => {
+    if (!isAuthenticated) {
+      onNavigate("login");
+      return;
+    }
+    const duplicated: Slide = {
+      ...slide,
+      id: `slide-${Date.now()}`,
+      title: `${slide.title} (Nhân bản)`
+    };
+    const idx = slides.findIndex(s => s.id === slide.id);
+    const updated = [...slides];
+    updated.splice(idx + 1, 0, duplicated);
+    setSlides(updated);
+    setActiveSlideId(duplicated.id);
+  };
+
+  const handleMoveUp = (index: number) => {
+    if (index === 0) return;
+    const updated = [...slides];
+    const temp = updated[index];
+    updated[index] = updated[index - 1];
+    updated[index - 1] = temp;
+    setSlides(updated);
+  };
+
+  const handleMoveDown = (index: number) => {
+    if (index === slides.length - 1) return;
+    const updated = [...slides];
+    const temp = updated[index];
+    updated[index] = updated[index + 1];
+    updated[index + 1] = temp;
+    setSlides(updated);
+  };
+
+  const updateActiveSlide = (fields: Partial<Slide>) => {
+    const updated = slides.map(s => {
+      if (s.id === activeSlideId) {
+        return { ...s, ...fields };
+      }
+      return s;
+    });
+    setSlides(updated);
+  };
+
+  const handleCreateVideo = () => {
+    if (!isAuthenticated) {
+      onNavigate("login");
       return;
     }
     setIsRendering(true);
@@ -255,7 +397,6 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
     setIsPlaying(false);
   };
 
-  // Rendering ticks
   useEffect(() => {
     let interval: any = null;
     if (isRendering) {
@@ -266,18 +407,19 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
             setRenderStep('completed');
             setIsRendering(false);
             
-            // Build completed VideoItem
             const finalTitle = storyTitle || "Cuộc phiêu lưu kỳ diệu " + new Date().toLocaleDateString('vi-VN');
             const styleName = STYLES.find(s => s.id === selectedStyle)?.name || "Anime";
             const coverImg = STYLES.find(s => s.id === selectedStyle)?.coverImage || "https://lh3.googleusercontent.com/aida-public/AB6AXuAGRMABwkcsNkB6cazPtEcY1MX5dp...";
             
+            const compiledPrompt = slides.map((s, idx) => `[Cảnh ${idx + 1}: ${s.title}]\n${s.content}`).join("\n\n");
+
             const newVideo: VideoItem = {
               id: "gen-" + Date.now(),
               title: finalTitle,
               date: new Date().toLocaleDateString('vi-VN'),
               duration: `00:${duration < 10 ? '0' + duration : duration}`,
               style: styleName,
-              prompt: prompt,
+              prompt: compiledPrompt,
               aspectRatio: aspectRatio,
               status: "completed",
               progress: 100,
@@ -300,7 +442,7 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
       }, 250);
     }
     return () => clearInterval(interval);
-  }, [isRendering, duration, selectedStyle, aspectRatio, prompt, storyTitle]);
+  }, [isRendering, duration, selectedStyle, aspectRatio, slides, storyTitle]);
 
   return (
     <div className="min-h-screen bg-[#FFFDF7] pb-24 md:pb-12 pt-10">
@@ -309,369 +451,412 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
         {/* Banner Title */}
         <div className="text-center md:text-left space-y-2">
           <h1 className="text-3xl md:text-4xl font-extrabold text-[#2d6c00] font-heading flex items-center justify-center md:justify-start gap-2">
-            🌱 Chuẩn Bị Nội Dung & Slide Câu Chuyện
+            🌱 Sân Chơi Thiết Kế Slide Câu Chuyện
           </h1>
           <p className="text-on-surface-variant font-medium text-sm md:text-base">
-            Trang này giúp ba mẹ chuẩn bị nội dung câu chuyện và các slide trước khi bắt đầu quy trình workflow hoàn thiện.
+            Biên tập và chỉnh sửa slide từ Google NotebookLM để chuẩn bị câu chuyện mầm non hoàn chỉnh.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Top Uploader Bar */}
+        <div className="bg-white p-5 rounded-3xl border border-surface-container flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+          <div className="space-y-1">
+            <h3 className="text-sm font-black text-[#2d6c00] flex items-center gap-1.5 uppercase">
+              📚 Nạp dữ liệu slide từ Google NotebookLM
+            </h3>
+            <p className="text-xs text-outline font-medium">
+              Nhập tệp (.txt, .md, .json) xuất bản từ NotebookLM để nạp vào editor câu chuyện.
+            </p>
+          </div>
+          <label className="cursor-pointer px-6 py-2.5 bg-[#4bafff]/10 hover:bg-[#4bafff]/25 text-[#00639c] text-xs font-black rounded-full transition-all border border-[#4bafff]/20 flex items-center gap-1.5 shadow-sm">
+            <Upload className="w-4 h-4" />
+            <span>Nhập tệp Slide NotebookLM</span>
+            <input
+              type="file"
+              accept=".txt,.md,.json"
+              onChange={handleImportNotebookLM}
+              className="hidden"
+            />
+          </label>
+        </div>
+
+        {/* Canva-like workspace layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           
-          {/* LEFT: CONTROLS */}
-          <div className="lg:col-span-7 space-y-6">
-            
-            {/* Primary Workflow: NotebookLM Slide Import Card */}
-            <div className="bg-white p-6 rounded-3xl shadow-[0_16px_32px_rgba(217,179,140,0.15)] border-2 border-[#2d6c00]/30 relative group space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="bg-[#2d6c00]/15 text-[#2d6c00] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">Khuyên Dùng</span>
-                <h2 className="font-heading text-xl text-primary font-black">
-                  Cách 1: Nhập Slide Từ NotebookLM
-                </h2>
-              </div>
-              
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                <strong>Google NotebookLM</strong> là công cụ AI ghi chú thông minh giúp ba mẹ biên tập câu chuyện, giáo án nhanh chóng. Ba mẹ chỉ cần xuất bản ghi chú dạng văn bản rồi nhập vào đây để Hạt Giống IQ tự động chia slide.
-              </p>
-
-              {/* Explanatory instruction list */}
-              <div className="bg-[#fcfbf9] border border-surface-container rounded-2xl p-4 text-xs space-y-2 text-[#404a39]">
-                <div className="flex items-start gap-2">
-                  <span className="font-bold text-[#2d6c00]">1.</span>
-                  <p>Truy cập NotebookLM và tải xuống/sao chép ghi chú câu chuyện của bé dưới dạng tệp tin văn bản.</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="font-bold text-[#2d6c00]">2.</span>
-                  <p>Hỗ trợ xuất các định dạng: <strong>.txt, .md, .json</strong>.</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="font-bold text-[#2d6c00]">3.</span>
-                  <p>Hạt Giống IQ sẽ tự động tách nội dung thành từng slide tương tác có bố cục rõ ràng.</p>
-                </div>
+          {/* LEFT PANEL: Slide thumb navigator */}
+          <div className="lg:col-span-3 bg-white p-4 rounded-3xl border border-surface-container flex flex-col justify-between space-y-4 shadow-sm">
+            <div className="space-y-3 flex-grow overflow-y-auto max-h-[500px] custom-scrollbar">
+              <div className="flex items-center justify-between border-b border-surface-container pb-2 mb-2">
+                <span className="text-xs font-black text-on-surface-variant uppercase tracking-wider">Danh sách slide</span>
+                <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">{slides.length} Trang</span>
               </div>
 
-              {/* Step progression diagram */}
-              <div className="flex justify-between items-center text-[10px] font-black text-outline bg-surface-container/30 px-3 py-2 rounded-xl border border-surface-container">
-                <span>Google NotebookLM</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-                <span>Xuất Slide (.txt/.json)</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-                <span>Nhập vào Hạt Giống IQ</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-                <span>Chỉnh sửa Workflow</span>
-              </div>
-
-              {/* Dropzone Upload Button */}
-              <label className="cursor-pointer border-2 border-dashed border-[#4bafff] hover:border-[#00639c] bg-[#4bafff]/5 hover:bg-[#4bafff]/15 transition-all p-6 rounded-2xl flex flex-col items-center justify-center text-center gap-2 shadow-inner group">
-                <Upload className="w-8 h-8 text-[#00639c] group-hover:scale-110 transition-transform animate-pulse" />
-                <span className="text-xs font-black text-[#004a77]">Chọn tệp từ máy tính (.txt, .md, .json)</span>
-                <span className="text-[10px] text-outline font-bold">Kéo thả tệp hoặc click tại đây để tải slide</span>
-                <input
-                  type="file"
-                  accept=".txt,.md,.json"
-                  onChange={handleImportNotebookLM}
-                  className="hidden"
-                />
-              </label>
-            </div>
-
-            {/* Divider/Label for alternative path */}
-            <div className="flex items-center gap-4 py-2">
-              <div className="h-0.5 bg-surface-container flex-grow"></div>
-              <span className="text-xs font-black text-outline uppercase tracking-wider">Hoặc tự soạn thảo câu chuyện thủ công</span>
-              <div className="h-0.5 bg-surface-container flex-grow"></div>
-            </div>
-
-            {/* Alternative Workflow: Manual Content Creation Options Card */}
-            <div className="bg-white p-6 rounded-3xl shadow-[0_16px_32px_rgba(217,179,140,0.15)] border-2 border-surface-container relative group space-y-4">
-              <h2 className="font-heading text-lg text-on-surface font-black">
-                Cách 2: Xây Dựng Câu Chuyện Thủ Công
-              </h2>
-              
-              <div className="relative">
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  className="w-full h-40 p-4 bg-[#FFFDF7] border-2 border-outline-variant rounded-2xl focus:ring-4 focus:ring-primary-container/20 focus:border-primary outline-none transition-all resize-none font-sans text-base text-on-surface"
-                  placeholder="Ví dụ: [Cảnh 1] Một chú hạt giống nhỏ đi tìm kiếm kho báu trí tuệ... [Cảnh 2] ..."
-                />
-                
-                <div className="absolute bottom-3 right-3 flex items-center gap-3">
-                  <span className="text-xs text-outline font-black">
-                    {prompt.length} / 2000
-                  </span>
-                  <button
-                    onClick={handleAIExpand}
-                    disabled={isExpanding}
-                    className={`w-10 h-10 rounded-full ${isExpanding ? 'bg-outline animate-spin' : 'bg-secondary-container hover:scale-110'} text-white flex items-center justify-center transition-all shadow-md cursor-pointer`}
-                    title="Văn bản thông minh bằng AI"
-                  >
-                    <Wand2 className="w-5 h-5 fill-white" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Suggestions */}
-              <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-xs text-on-surface-variant font-extrabold uppercase">Gợi ý chủ đề:</span>
-                <button
-                  onClick={() => handleSelectSuggestion("Chú rùa già thông thái kể chuyện đại dương xanh bảo vệ san hô")}
-                  className="px-3 py-1 bg-[#6bbf3a]/10 hover:bg-[#6bbf3a]/25 text-xs text-[#2d6c00] font-bold rounded-full transition-all border border-[#6bbf3a]/20"
-                >
-                  🐢 Đại dương
-                </button>
-                <button
-                  onClick={() => handleSelectSuggestion("Bé gấu trúc dũng cảm tự học cách dọn dẹp đồ chơi sau khi chơi xong")}
-                  className="px-3 py-1 bg-[#4bafff]/10 hover:bg-[#4bafff]/25 text-xs text-secondary font-bold rounded-full transition-all border border-[#4bafff]/20"
-                >
-                  🐼 Ngăn nắp
-                </button>
-                <button
-                  onClick={() => handleSelectSuggestion("Một phi thuyền nhỏ bay thăm sáu hành tinh thân hữu rực rỡ ngoài không gian")}
-                  className="px-3 py-1 bg-[#ffdea5]/40 hover:bg-[#ffdea5]/60 text-xs text-[#7b5800] font-bold rounded-full transition-all border border-[#ffdea5]/50"
-                >
-                  🚀 Vũ trụ
-                </button>
-              </div>
-            </div>
-
-            {/* Style Picker */}
-            <div className="bg-[#FFFDF7] p-6 rounded-3xl border-2 border-dashed border-outline-variant space-y-4">
-              <h3 className="font-heading text-on-surface-variant uppercase tracking-wider text-xs font-black flex items-center gap-2">
-                🎨 Chọn phong cách mỹ thuật
-              </h3>
-              
-              <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
-                {STYLES.map((style) => (
-                  <div
-                    key={style.id}
-                    onClick={() => setSelectedStyle(style.id)}
-                    className="flex-shrink-0 cursor-pointer text-center group"
-                  >
-                    <div className={`w-24 h-24 rounded-2xl overflow-hidden border-4 ${selectedStyle === style.id ? 'border-[#2d6c00] ring-4 ring-[#6bbf3a]/30' : 'border-transparent'} relative shadow-md transition-all group-hover:scale-105 duration-200`}>
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent z-10"></div>
-                      <div className="absolute bottom-1 left-0 right-0 text-center text-white font-bold text-xs z-20">
-                        {style.name}
+              <div className="space-y-3">
+                {slides.map((slide, idx) => {
+                  const isActive = slide.id === activeSlideId;
+                  return (
+                    <div 
+                      key={slide.id}
+                      className={`p-3 rounded-2xl border-2 transition-all flex items-stretch gap-3 relative group cursor-pointer ${
+                        isActive ? 'border-[#2d6c00] bg-[#6bbf3a]/5 shadow-sm' : 'border-surface-container-high hover:border-outline-variant bg-[#fcfbf9]'
+                      }`}
+                      onClick={() => setActiveSlideId(slide.id)}
+                    >
+                      {/* Left index and order tools */}
+                      <div className="flex flex-col items-center justify-between text-outline text-xs">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleMoveUp(idx); }}
+                          disabled={idx === 0}
+                          className="hover:text-black disabled:opacity-30"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <span className="font-extrabold">{idx + 1}</span>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleMoveDown(idx); }}
+                          disabled={idx === slides.length - 1}
+                          className="hover:text-black disabled:opacity-30"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
                       </div>
-                      <img
-                        src={style.coverImage}
-                        alt={style.name}
-                        className="w-full h-full object-cover"
-                      />
+
+                      {/* Small slide style preview block */}
+                      <div 
+                        className={`w-16 h-12 rounded-lg flex items-center justify-center text-[10px] overflow-hidden border border-surface-container shadow-inner ${slide.gradientPreset || ''}`}
+                        style={{ backgroundColor: slide.gradientPreset ? undefined : slide.backgroundColor }}
+                      >
+                        <span className="line-clamp-1 px-1 font-bold text-[8px]" style={{ color: slide.textColor }}>
+                          {slide.title || "Trống"}
+                        </span>
+                      </div>
+
+                      {/* Quick action badges overlay on hover */}
+                      <div className="absolute right-2 top-2 hidden group-hover:flex items-center gap-1">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDuplicateSlide(slide); }}
+                          className="p-1 bg-white hover:bg-surface-container rounded border border-surface-container shadow-sm"
+                          title="Nhân bản slide"
+                        >
+                          <Copy className="w-3 h-3 text-outline" />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSlide(slide.id); }}
+                          className="p-1 bg-white hover:bg-red-50 rounded border border-surface-container shadow-sm"
+                          title="Xóa slide"
+                        >
+                          <Trash2 className="w-3 h-3 text-red-600" />
+                        </button>
+                      </div>
                     </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button
+              onClick={handleAddSlide}
+              className="w-full py-3 bg-[#6bbf3a]/15 text-[#2d6c00] hover:bg-[#6bbf3a]/25 transition-colors border border-dashed border-[#6bbf3a]/50 rounded-2xl text-xs font-extrabold flex items-center justify-center gap-1"
+            >
+              <Plus className="w-4 h-4" /> Thêm trang slide mới
+            </button>
+          </div>
+
+          {/* CENTER PANEL: Large Slide Canvas */}
+          <div className="lg:col-span-6 flex flex-col justify-between bg-[#fcfbf9] p-6 rounded-3xl border border-surface-container min-h-[500px] shadow-sm">
+            
+            {/* Editor Canvas Container inside center grid */}
+            <div className="flex-grow flex items-center justify-center py-4">
+              
+              {!isRendering && !renderedVideo ? (
+                <div 
+                  className={`w-full max-w-xl aspect-video rounded-3xl shadow-lg border-2 border-surface-container p-8 flex flex-col justify-center relative overflow-hidden transition-all duration-300 ${activeSlide.gradientPreset || ''}`}
+                  style={{ 
+                    backgroundColor: activeSlide.gradientPreset ? undefined : activeSlide.backgroundColor,
+                    borderColor: '#eae8e2'
+                  }}
+                >
+                  {/* Canvas editable text fields */}
+                  <div className={`space-y-4 w-full h-full flex flex-col justify-center`}>
+                    <input 
+                      type="text"
+                      value={activeSlide.title}
+                      onChange={(e) => updateActiveSlide({ title: e.target.value })}
+                      placeholder="Tiêu đề slide..."
+                      className="bg-transparent border-b border-transparent hover:border-outline-variant focus:border-[#2d6c00] outline-none text-lg font-black w-full text-center transition-all"
+                      style={{ 
+                        color: activeSlide.textColor,
+                        textAlign: activeSlide.textAlign,
+                        fontWeight: activeSlide.isBold ? "900" : "400",
+                        fontStyle: activeSlide.isItalic ? "italic" : "normal"
+                      }}
+                    />
+                    
+                    <textarea
+                      value={activeSlide.content}
+                      onChange={(e) => updateActiveSlide({ content: e.target.value })}
+                      placeholder="Nhập nội dung slide câu chuyện tại đây..."
+                      className="bg-transparent border border-transparent hover:border-outline-variant focus:border-[#2d6c00] outline-none text-xs font-bold w-full h-24 p-2 transition-all resize-none overflow-hidden text-center leading-relaxed"
+                      style={{ 
+                        color: activeSlide.textColor,
+                        textAlign: activeSlide.textAlign,
+                        fontWeight: activeSlide.isBold ? "bold" : "normal",
+                        fontStyle: activeSlide.isItalic ? "italic" : "normal"
+                      }}
+                    />
                   </div>
+                </div>
+              ) : isRendering ? (
+                <div className="w-full max-w-xl aspect-video bg-white rounded-3xl border border-surface-container shadow-md p-8 flex flex-col items-center justify-center text-center space-y-6">
+                  <div className="w-20 h-20 bg-[#6bbf3a]/10 rounded-full flex items-center justify-center animate-bounce">
+                    <span className="text-4xl">🌿</span>
+                  </div>
+                  <div className="space-y-3 w-full max-w-xs">
+                    <h4 className="font-heading text-base font-black text-[#2d6c00]">Đang tạo slide kịch bản câu chuyện...</h4>
+                    <div className="w-full h-3 bg-surface-container rounded-full overflow-hidden shadow-inner border border-surface-container-high relative">
+                      <div 
+                        className="h-full bg-gradient-to-r from-[#6bbf3a] to-[#2d6c00] rounded-full transition-all duration-300"
+                        style={{ width: `${renderProgress}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-xs font-black text-outline">{renderProgress}% Hoàn tất</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full max-w-xl aspect-video rounded-3xl overflow-hidden shadow-lg bg-black relative group">
+                  {isPlaying ? (
+                    <video
+                      src="https://assets.mixkit.co/videos/preview/mixkit-forest-stream-in-the-sunlight-529-large.mp4"
+                      autoPlay
+                      controls
+                      className="w-full h-full object-cover"
+                      onEnded={() => setIsPlaying(false)}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col justify-center items-center">
+                      <img
+                        src={renderedVideo?.coverImage}
+                        alt="cover"
+                        className="absolute inset-0 w-full h-full object-cover filter brightness-70"
+                      />
+                      <button
+                        onClick={() => setIsPlaying(true)}
+                        className="bg-white/95 rounded-full p-4 text-[#2d6c00] shadow-xl hover:scale-110 transition-transform cursor-pointer relative z-10"
+                      >
+                        <Play className="w-10 h-10 fill-[#2d6c00] translate-x-0.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Bottom quick control prompts */}
+            <div className="border-t border-surface-container pt-3 flex items-center justify-between text-xs text-outline font-bold">
+              <span>Đang chọn: <strong>{activeSlide.title || "Không có tiêu đề"}</strong></span>
+              <button 
+                onClick={handleAIExpand}
+                disabled={isExpanding}
+                className="px-3 py-1 bg-secondary-container hover:bg-secondary text-white rounded-full flex items-center gap-1 cursor-pointer transition-colors shadow-sm disabled:opacity-50"
+              >
+                <Wand2 className="w-3.5 h-3.5" />
+                <span>AI Tối ưu hóa văn bản slide</span>
+              </button>
+            </div>
+          </div>
+
+          {/* RIGHT PANEL: Slide Properties */}
+          <div className="lg:col-span-3 bg-white p-5 rounded-3xl border border-surface-container space-y-5 shadow-sm">
+            <h3 className="text-xs font-black text-on-surface-variant uppercase tracking-wider border-b border-surface-container pb-2">
+              Bảng Thuộc Tính Slide
+            </h3>
+
+            {/* Wording configuration */}
+            <div className="space-y-4 text-xs font-bold text-on-surface-variant">
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-outline uppercase tracking-wider block">Tiêu đề Slide</label>
+                <input 
+                  type="text"
+                  value={activeSlide.title}
+                  onChange={(e) => updateActiveSlide({ title: e.target.value })}
+                  className="w-full p-2.5 bg-[#FFFDF7] border-2 border-outline-variant focus:border-[#2d6c00] outline-none rounded-xl text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-outline uppercase tracking-wider block">Nội dung Slide</label>
+                <textarea 
+                  value={activeSlide.content}
+                  onChange={(e) => updateActiveSlide({ content: e.target.value })}
+                  className="w-full h-24 p-2.5 bg-[#FFFDF7] border-2 border-outline-variant focus:border-[#2d6c00] outline-none rounded-xl text-xs resize-none"
+                />
+              </div>
+            </div>
+
+            {/* Typography / Formatting */}
+            <div className="space-y-2">
+              <span className="text-[10px] text-outline font-black uppercase tracking-wider block">Định dạng chữ</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => updateActiveSlide({ isBold: !activeSlide.isBold })}
+                  className={`p-2 rounded-xl border flex-grow flex items-center justify-center transition-all ${
+                    activeSlide.isBold ? 'border-[#2d6c00] bg-[#6bbf3a]/15 text-[#2d6c00]' : 'border-outline hover:bg-surface-container'
+                  }`}
+                  title="Chữ đậm"
+                >
+                  <Bold className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => updateActiveSlide({ isItalic: !activeSlide.isItalic })}
+                  className={`p-2 rounded-xl border flex-grow flex items-center justify-center transition-all ${
+                    activeSlide.isItalic ? 'border-[#2d6c00] bg-[#6bbf3a]/15 text-[#2d6c00]' : 'border-outline hover:bg-surface-container'
+                  }`}
+                  title="Chữ nghiêng"
+                >
+                  <Italic className="w-4 h-4" />
+                </button>
+                <div className="h-8 w-[1px] bg-surface-container"></div>
+                <button
+                  onClick={() => updateActiveSlide({ textAlign: "left" })}
+                  className={`p-2 rounded-xl border flex-grow flex items-center justify-center transition-all ${
+                    activeSlide.textAlign === "left" ? 'border-[#2d6c00] bg-[#6bbf3a]/15 text-[#2d6c00]' : 'border-outline hover:bg-surface-container'
+                  }`}
+                >
+                  <AlignLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => updateActiveSlide({ textAlign: "center" })}
+                  className={`p-2 rounded-xl border flex-grow flex items-center justify-center transition-all ${
+                    activeSlide.textAlign === "center" ? 'border-[#2d6c00] bg-[#6bbf3a]/15 text-[#2d6c00]' : 'border-outline hover:bg-surface-container'
+                  }`}
+                >
+                  <AlignCenter className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => updateActiveSlide({ textAlign: "right" })}
+                  className={`p-2 rounded-xl border flex-grow flex items-center justify-center transition-all ${
+                    activeSlide.textAlign === "right" ? 'border-[#2d6c00] bg-[#6bbf3a]/15 text-[#2d6c00]' : 'border-outline hover:bg-surface-container'
+                  }`}
+                >
+                  <AlignRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Colors presets */}
+            <div className="space-y-3">
+              <span className="text-[10px] text-outline font-black uppercase tracking-wider block">Giao diện (Màu nền & Phông chữ)</span>
+              
+              {/* Pastel preset color nodes */}
+              <div className="grid grid-cols-5 gap-2">
+                {[
+                  { bg: "#FFFDF7", text: "#1b1c19", label: "Kem" },
+                  { bg: "#cfe5ff", text: "#004a77", label: "Xanh" },
+                  { bg: "#d1e7dd", text: "#0f5132", label: "Lục" },
+                  { bg: "#f8d7da", text: "#842029", label: "Hồng" },
+                  { bg: "#fff3cd", text: "#664d03", label: "Vàng" }
+                ].map((color, idx) => (
+                  <div 
+                    key={idx}
+                    onClick={() => updateActiveSlide({ backgroundColor: color.bg, textColor: color.text, gradientPreset: undefined })}
+                    className="w-8 h-8 rounded-full cursor-pointer border border-outline-variant shadow-sm hover:scale-110 transition-transform"
+                    style={{ backgroundColor: color.bg }}
+                    title={color.label}
+                  />
                 ))}
               </div>
-              <p className="text-xs text-on-surface-variant italic">
-                * {STYLES.find(s => s.id === selectedStyle)?.promptDescription}
-              </p>
+
+              {/* Background gradient presets */}
+              <div className="space-y-1.5 pt-2">
+                <span className="text-[9px] text-outline font-black uppercase tracking-wider block">Gợi ý Gradient</span>
+                <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                  {[
+                    { class: "bg-gradient-to-tr from-[#ffecd2] to-[#fcb69f]", label: "Soft Peach" },
+                    { class: "bg-gradient-to-tr from-[#a1c4fd] to-[#c2e9fb]", label: "Soft Sky" },
+                    { class: "bg-gradient-to-tr from-[#d4fc79] to-[#96e6a1]", label: "Soft Mint" },
+                    { class: "bg-gradient-to-tr from-[#fbc2eb] to-[#a6c1ee]", label: "Soft Lavender" }
+                  ].map((grad, idx) => (
+                    <div 
+                      key={idx}
+                      onClick={() => updateActiveSlide({ gradientPreset: grad.class, textColor: "#1b1c19" })}
+                      className={`w-10 h-7 rounded cursor-pointer border border-surface-container shadow-sm flex-shrink-0 ${grad.class}`}
+                      title={grad.label}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {/* Layout Settings Rows */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              
+            {/* Downstream compile parameters */}
+            <div className="border-t border-surface-container pt-4 space-y-3">
               {/* Ratio Setting */}
-              <div className="bg-white p-5 rounded-3xl shadow-sm border border-surface-container space-y-3">
-                <label className="text-xs font-extrabold text-on-surface-variant flex items-center gap-2 uppercase tracking-wide">
-                  <LayoutGrid className="w-4.5 h-4.5 text-[#2d6c00]" /> Tỷ lệ khung hình
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-outline font-black uppercase tracking-wider block">Tỷ lệ slide trình chiếu</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setAspectRatio('16:9')}
-                    className={`flex-1 py-3 border-2 ${aspectRatio === '16:9' ? 'border-[#2d6c00] bg-[#6bbf3a]/5' : 'border-surface-container-high hover:border-[#6bbf3a]'} rounded-xl flex flex-col items-center gap-1 transition-all cursor-pointer`}
+                    className={`flex-grow py-2 border rounded-xl text-xs font-extrabold flex items-center justify-center transition-all ${
+                      aspectRatio === '16:9' ? 'border-[#2d6c00] bg-[#6bbf3a]/15 text-[#2d6c00]' : 'border-outline hover:bg-surface-container'
+                    }`}
                   >
-                    <div className={`w-8 h-4 ${aspectRatio === '16:9' ? 'bg-[#6bbf3a]/30 border-[#2d6c00]' : 'bg-surface-container-high border-outline'} border-2 rounded-sm`}></div>
-                    <span className="text-xs font-extrabold">16:9</span>
+                    16:9
                   </button>
                   <button
                     onClick={() => setAspectRatio('9:16')}
-                    className={`flex-1 py-3 border-2 ${aspectRatio === '9:16' ? 'border-[#2d6c00] bg-[#6bbf3a]/5' : 'border-surface-container-high hover:border-[#6bbf3a]'} rounded-xl flex flex-col items-center gap-1 transition-all cursor-pointer`}
+                    className={`flex-grow py-2 border rounded-xl text-xs font-extrabold flex items-center justify-center transition-all ${
+                      aspectRatio === '9:16' ? 'border-[#2d6c00] bg-[#6bbf3a]/15 text-[#2d6c00]' : 'border-outline hover:bg-surface-container'
+                    }`}
                   >
-                    <div className={`w-4 h-8 ${aspectRatio === '9:16' ? 'bg-[#6bbf3a]/30 border-[#2d6c00]' : 'bg-surface-container-high border-outline'} border-2 rounded-sm`}></div>
-                    <span className="text-xs font-extrabold">9:16</span>
+                    9:16
                   </button>
                   <button
                     onClick={() => setAspectRatio('1:1')}
-                    className={`flex-1 py-3 border-2 ${aspectRatio === '1:1' ? 'border-[#2d6c00] bg-[#6bbf3a]/5' : 'border-surface-container-high hover:border-[#6bbf3a]'} rounded-xl flex flex-col items-center gap-1 transition-all cursor-pointer`}
+                    className={`flex-grow py-2 border rounded-xl text-xs font-extrabold flex items-center justify-center transition-all ${
+                      aspectRatio === '1:1' ? 'border-[#2d6c00] bg-[#6bbf3a]/15 text-[#2d6c00]' : 'border-outline hover:bg-surface-container'
+                    }`}
                   >
-                    <div className={`w-6 h-6 ${aspectRatio === '1:1' ? 'bg-[#6bbf3a]/30 border-[#2d6c00]' : 'bg-surface-container-high border-outline'} border-2 rounded-sm`}></div>
-                    <span className="text-xs font-extrabold">1:1</span>
+                    1:1
                   </button>
                 </div>
               </div>
 
-              {/* Duration Setting */}
-              <div className="bg-white p-5 rounded-3xl shadow-sm border border-surface-container space-y-3">
-                <label className="text-xs font-extrabold text-on-surface-variant flex items-center gap-2 uppercase tracking-wide">
-                  <Clock className="w-4.5 h-4.5 text-[#2d6c00]" /> Thời lượng trình chiếu
-                </label>
-                <div className="pt-2">
-                  <input
-                    type="range"
-                    min="15"
-                    max="60"
-                    step="5"
-                    value={duration}
-                    onChange={(e) => setDuration(Number(e.target.value))}
-                    className="w-full h-2 bg-surface-container rounded-full appearance-none cursor-pointer accent-[#2d6c00]"
-                  />
-                  <div className="flex justify-between items-center mt-2 text-xs text-outline font-bold">
-                    <span>15 giây</span>
-                    <span className="bg-[#6bbf3a]/15 text-[#2d6c00] px-2 py-0.5 rounded-full font-extrabold text-sm">{duration} giây</span>
-                    <span>60 giây</span>
-                  </div>
-                </div>
+              {/* Style picker */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-outline font-black uppercase tracking-wider block">Mỹ thuật video hoạt họa</label>
+                <select 
+                  value={selectedStyle}
+                  onChange={(e) => setSelectedStyle(e.target.value)}
+                  className="w-full text-xs font-bold py-2 px-3 border border-outline rounded-xl bg-white"
+                >
+                  {STYLES.map((style) => (
+                    <option key={style.id} value={style.id}>{style.name}</option>
+                  ))}
+                </select>
               </div>
-            </div>
 
-            {/* CTA Generate Buttons */}
-            <div className="space-y-3">
-              <button
-                onClick={handleCreateVideo}
-                disabled={isRendering || isExpanding}
-                className="w-full py-5 bg-gradient-to-r from-[#F5B82E] to-[#FF9F40] text-white rounded-full font-extrabold text-xl button-3d-yellow flex items-center justify-center gap-3 cursor-pointer shadow-lg hover:brightness-105"
-              >
-                <span>✨ Hoàn tất chuẩn bị slide kịch bản</span>
-              </button>
-              <div className="flex items-center justify-center gap-2 text-on-surface-variant font-extrabold text-xs">
-                <Star className="w-4.5 h-4.5 text-[#dba110] fill-[#dba110]" />
-                <span>Bé còn 12 lượt tạo slide kịch bản miễn phí hôm nay</span>
-              </div>
+              {/* Submit CTA */}
+              {!renderedVideo ? (
+                <button
+                  onClick={handleCreateVideo}
+                  disabled={isRendering || isExpanding}
+                  className="w-full py-4.5 bg-gradient-to-r from-[#F5B82E] to-[#FF9F40] text-white rounded-full font-extrabold text-xs shadow-md hover:scale-102 transition-transform cursor-pointer button-3d-yellow"
+                >
+                  <span>✨ Hoàn tất chuẩn bị slide & tiếp tục workflow</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => onNavigate("workflow")}
+                  className="w-full py-4.5 bg-[#2d6c00] text-white rounded-full font-extrabold text-xs shadow-md hover:scale-102 transition-transform cursor-pointer"
+                >
+                  <span>➜ Tiếp tục cấu hình Workflow</span>
+                </button>
+              )}
             </div>
 
           </div>
 
-          {/* RIGHT: PREVIEW / PROGRESS */}
-          <aside className="lg:col-span-5">
-            <div className="sticky top-24 bg-white border-8 border-white rounded-3xl shadow-xl aspect-video lg:aspect-auto lg:h-[620px] flex flex-col items-stretch overflow-hidden relative">
-              
-              {/* Inner container */}
-              <div className="flex-grow flex flex-col items-center justify-center p-8 bg-[#f5f3ee] text-center relative overflow-hidden">
-                
-                {/* IDLE state */}
-                {!isRendering && !renderedVideo && (
-                  <div className="space-y-6 flex flex-col items-center z-10">
-                    <div className="w-48 h-48 bg-white rounded-full shadow-md flex items-center justify-center border-4 border-[#6bbf3a] animate-pulse">
-                      <span className="text-7xl">🎬</span>
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="font-heading text-lg font-black text-[#2d6c00]">Phòng tạo slide câu chuyện đã sẵn sàng</h3>
-                      <p className="text-sm font-medium text-on-surface-variant max-w-xs mx-auto">
-                        Nhấn nút màu cam để biến câu chuyện của bé thành các slide sinh động.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* RENDERING / PROGRESS states */}
-                {isRendering && (
-                  <div className="space-y-8 w-full z-10">
-                    <div className="w-44 h-44 bg-white rounded-full shadow-lg flex items-center justify-center border-4 border-[#6bbf3a] mx-auto relative animate-bounce">
-                      <span className="text-6xl animate-pulse">🌿</span>
-                    </div>
-
-                    <div className="space-y-4">
-                      <h3 className="font-heading text-lg font-black text-[#2d6c00]">Đang tạo slide kịch bản câu chuyện...</h3>
-                      
-                      {/* Workflow indicators */}
-                      <div className="flex justify-between items-center w-full px-4 relative max-w-sm mx-auto">
-                        <div className="absolute top-1/2 left-0 w-full h-1 bg-white -translate-y-1/2 z-0 rounded-full"></div>
-                        <div
-                          className="absolute top-1/2 left-0 h-1 bg-[#6bbf3a] -translate-y-1/2 z-0 rounded-full transition-all duration-300"
-                          style={{ width: `${renderProgress}%` }}
-                        ></div>
-                        <div className={`z-10 px-3 py-1 rounded-full text-xs font-black border-2 ${renderStep === 'queued' ? 'bg-[#6bbf3a] text-white border-white' : 'bg-white text-[#2d6c00] border-[#6bbf3a]'}`}>
-                          Xếp hàng
-                        </div>
-                        <div className={`z-10 px-3 py-1 rounded-full text-xs font-black border-2 ${renderStep === 'drawing' ? 'bg-[#6bbf3a] text-white border-white' : 'bg-white text-[#2d6c00] border-[#6bbf3a]'}`}>
-                          Đang vẽ
-                        </div>
-                        <div className={`z-10 px-3 py-1 rounded-full text-xs font-black border-2 ${renderStep === 'completed' ? 'bg-[#6bbf3a] text-white border-white' : 'bg-white text-outline border-surface-container-high'}`}>
-                          Hoàn tất
-                        </div>
-                      </div>
-
-                      {/* Progress Bar background layout */}
-                      <div className="w-full h-4 bg-white rounded-full overflow-hidden shadow-inner border border-surface-container-high max-w-sm mx-auto relative">
-                        <div
-                          className="h-full bg-gradient-to-r from-[#6bbf3a] to-[#2d6c00] rounded-full transition-all duration-300"
-                          style={{ width: `${renderProgress}%` }}
-                        ></div>
-                      </div>
-
-                      <p className="text-xs font-bold text-on-surface-variant italic">
-                        &quot;Phép màu nuôi dưỡng mầm trí tuệ đang xuất hiện... {renderProgress}%&quot;
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* COMPLETED SUCCESS states */}
-                {renderedVideo && !isRendering && (
-                  <div className="space-y-6 w-full h-full flex flex-col justify-center items-center z-10">
-                    <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-lg bg-black group-hover:scale-102 transition-transform">
-                      {isPlaying ? (
-                        <video
-                          src="https://assets.mixkit.co/videos/preview/mixkit-forest-stream-in-the-sunlight-529-large.mp4"
-                          autoPlay
-                          controls
-                          className="w-full h-full object-cover"
-                          onEnded={() => setIsPlaying(false)}
-                        />
-                      ) : (
-                        <div className="absolute inset-0 flex flex-col justify-center items-center">
-                          <img
-                            src={renderedVideo.coverImage}
-                            alt="cover"
-                            className="absolute inset-0 w-full h-full object-cover filter brightness-70"
-                          />
-                          <button
-                            onClick={() => setIsPlaying(true)}
-                            className="bg-white/95 rounded-full p-4 text-[#2d6c00] shadow-xl hover:scale-110 transition-transform cursor-pointer relative z-10"
-                          >
-                            <Play className="w-10 h-10 fill-[#2d6c00] translate-x-0.5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="inline-flex items-center gap-1.5 bg-[#6bbf3a]/15 text-[#2d6c00] px-3 py-1 rounded-full text-xs font-bold">
-                        <CheckCircle className="w-3.5 h-3.5 fill-[#2d6c00] text-white" />
-                        Tạo slide câu chuyện thành công!
-                      </div>
-                      <h3 className="font-heading text-lg font-black text-on-surface">{renderedVideo.title}</h3>
-                      <p className="text-xs text-outline">{renderedVideo.style} • {renderedVideo.aspectRatio}</p>
-                    </div>
-
-                    {/* Actions Panel */}
-                    <div className="w-full grid grid-cols-3 gap-2 mt-4">
-                      <button
-                        onClick={() => alert("Đã mở lệnh tải xuống file MP4 chất lượng cao cho bé!")}
-                        className="flex flex-col items-center gap-1 text-xs font-bold text-[#2d6c00] bg-[#6bbf3a]/10 p-2.5 rounded-xl hover:bg-[#6bbf3a]/20"
-                      >
-                        <Download className="w-5 h-5" /> Tải slide/video
-                      </button>
-                      <button
-                        onClick={() => onNavigate("voice")}
-                        className="flex flex-col items-center gap-1 text-xs font-bold text-secondary bg-[#cfe5ff]/40 p-2.5 rounded-xl hover:bg-[#cfe5ff]/60"
-                      >
-                        <Mic className="w-5 h-5" /> Lồng giọng
-                      </button>
-                      <button
-                        onClick={() => onNavigate("workflow")}
-                        className="flex flex-col items-center gap-1 text-xs font-bold text-[#7b5800] bg-[#ffdea5]/50 p-2.5 rounded-xl hover:bg-[#ffdea5]/70"
-                      >
-                        <GitFork className="w-5 h-5" /> Mở Workflow slide
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </aside>
-          
         </div>
+
       </div>
     </div>
   );
