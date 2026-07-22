@@ -13,9 +13,9 @@ import {
   Users,
 } from "lucide-react";
 
-import { VideoItem } from "./types";
-import { INITIAL_VIDEOS } from "./data";
+import { VideoItem, dtoToVideoItem } from "./types";
 import { useAuth } from "./context/AuthContext";
+import { videosApi } from "./api/videos";
 
 import HomeView from "./components/HomeView";
 import CreativeWorkspaceView from "./components/CreativeWorkspaceView";
@@ -38,15 +38,22 @@ export default function App() {
   const [sampleVideoTitle, setSampleVideoTitle] = useState<string>("");
   const [prepopulatedPrompt, setPrepopulatedPrompt] = useState("");
 
-  useEffect(() => {
-    const saved = localStorage.getItem("hat_giong_videos");
-    if (saved) {
-      try { setVideos(JSON.parse(saved)); } catch { setVideos(INITIAL_VIDEOS); }
-    } else {
-      setVideos(INITIAL_VIDEOS);
-      localStorage.setItem("hat_giong_videos", JSON.stringify(INITIAL_VIDEOS));
+  const refreshVideos = React.useCallback(async () => {
+    if (!isAuthenticated) {
+      setVideos([]);
+      return;
     }
-  }, []);
+    try {
+      const { videos: list } = await videosApi.list();
+      setVideos(list.map(dtoToVideoItem));
+    } catch (e) {
+      console.error("Không tải được danh sách video:", e);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    refreshVideos();
+  }, [refreshVideos]);
 
   // Redirect to login if trying to access protected tab while not authenticated
   const navigateTo = (tab: string) => {
@@ -57,21 +64,22 @@ export default function App() {
     setCurrentTab(tab);
   };
 
-  const handleVideoCreated = (newVideo: VideoItem) => {
-    const updated = [newVideo, ...videos];
-    setVideos(updated);
-    localStorage.setItem("hat_giong_videos", JSON.stringify(updated));
+  const handleVideoCreated = () => {
+    refreshVideos();
   };
 
-  const handleDeleteVideo = (id: string) => {
+  const handleDeleteVideo = async (id: string) => {
     if (!isAuthenticated) {
       navigateTo("login");
       return;
     }
-    if (confirm("Bạn có chắc muốn xóa tác phẩm này?")) {
-      const updated = videos.filter((v) => v.id !== id);
-      setVideos(updated);
-      localStorage.setItem("hat_giong_videos", JSON.stringify(updated));
+    if (confirm("Bạn có chắc muốn xóa tác phẩm này? Video sẽ bị xóa vĩnh viễn khỏi máy chủ.")) {
+      try {
+        await videosApi.remove(id);
+        setVideos((prev) => prev.filter((v) => v.id !== id));
+      } catch (e) {
+        alert("Xóa thất bại: " + (e as Error).message);
+      }
     }
   };
 
