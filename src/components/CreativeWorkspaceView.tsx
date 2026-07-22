@@ -28,11 +28,12 @@ import {
   ChevronUp 
 } from "lucide-react";
 import { STYLES } from "../data";
-import { VideoItem } from "../types";
 import { useAuth } from "../context/AuthContext";
+import { videosApi, SceneDto } from "../api/videos";
+import { storyApi, TemplateOptions } from "../api/story";
 
 interface CreativeWorkspaceViewProps {
-  onVideoCreated: (newVideo: VideoItem) => void;
+  onVideoCreated: () => void;
   onNavigate: (tab: string) => void;
 }
 
@@ -46,6 +47,7 @@ interface Slide {
   isBold: boolean;
   isItalic: boolean;
   gradientPreset?: string;
+  imagePrompt?: string;
 }
 
 export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: CreativeWorkspaceViewProps) {
@@ -78,21 +80,108 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
   const [selectedStyle, setSelectedStyle] = useState("anime");
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [duration, setDuration] = useState(30);
+  const [engine, setEngine] = useState<'slideshow' | 't2v'>('slideshow');
 
   // API generation state
   const [isExpanding, setIsExpanding] = useState(false);
   const [storyTitle, setStoryTitle] = useState("");
 
-  // Rendering state
+  // Rendering state (thật — poll từ backend)
   const [isRendering, setIsRendering] = useState(false);
   const [renderProgress, setProgress] = useState(0);
   const [renderStep, setRenderStep] = useState<'queued' | 'drawing' | 'completed'>('queued');
-  const [renderedVideo, setRenderedVideo] = useState<VideoItem | null>(null);
+  const [renderError, setRenderError] = useState<string | null>(null);
+  const [resultScenes, setResultScenes] = useState<SceneDto[] | null>(null);
 
-  // Playback state
-  const [isPlaying, setIsPlaying] = useState(false);
+  // Playback state (preview slideshow)
+  const [previewIdx, setPreviewIdx] = useState(0);
+
+  // Script builder (AI tự động / Prompt mẫu)
+  const [scriptTab, setScriptTab] = useState<'ai' | 'template'>('ai');
+  const [aiIdea, setAiIdea] = useState("");
+  const [aiSceneCount, setAiSceneCount] = useState(4);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [tmplOptions, setTmplOptions] = useState<TemplateOptions | null>(null);
+  const [tmplForm, setTmplForm] = useState({ characterCount: 2, genre: '', plotType: '', ageRange: '', sceneCount: 4, mainCharacter: '' });
+  const [samplePrompt, setSamplePrompt] = useState("");
+  const [pasteText, setPasteText] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const activeSlide = slides.find(s => s.id === activeSlideId) || slides[0];
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    storyApi.templateOptions().then(setTmplOptions).catch(() => {});
+  }, [isAuthenticated]);
+
+  // Đổ danh sách cảnh (AI/parse) vào slide editor.
+  const loadScenesIntoSlides = (scenes: { text: string; imagePrompt: string }[]) => {
+    if (scenes.length === 0) return;
+    const mapped: Slide[] = scenes.map((s, idx) => ({
+      id: `slide-${Date.now()}-${idx}`,
+      title: `Cảnh ${idx + 1}`,
+      content: s.text,
+      imagePrompt: s.imagePrompt,
+      backgroundColor: idx % 2 === 0 ? "#FFFDF7" : "#cfe5ff",
+      textColor: idx % 2 === 0 ? "#1b1c19" : "#004a77",
+      textAlign: "center" as const,
+      isBold: false,
+      isItalic: false,
+      gradientPreset: idx % 2 === 0 ? "bg-gradient-to-tr from-[#ffecd2] to-[#fcb69f]" : "bg-gradient-to-tr from-[#a1c4fd] to-[#c2e9fb]",
+    }));
+    setSlides(mapped);
+    setActiveSlideId(mapped[0].id);
+  };
+
+  const handleAIGenerate = async () => {
+    if (!isAuthenticated) { onNavigate("login"); return; }
+    if (!aiIdea.trim()) { alert("Nhập ý tưởng câu chuyện trước nhé!"); return; }
+    setAiLoading(true);
+    try {
+      const styleName = STYLES.find(s => s.id === selectedStyle)?.name || "Anime";
+      const { title, scenes } = await storyApi.generate(aiIdea, styleName, aiSceneCount);
+      if (title) setStoryTitle(title);
+      loadScenesIntoSlides(scenes);
+    } catch (e) {
+      alert("Lỗi tạo kịch bản: " + (e as Error).message);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleBuildTemplate = async () => {
+    if (!isAuthenticated) { onNavigate("login"); return; }
+    try {
+      const styleName = STYLES.find(s => s.id === selectedStyle)?.name || "Anime";
+      const { prompt } = await storyApi.template({ ...tmplForm, style: styleName });
+      setSamplePrompt(prompt);
+    } catch (e) {
+      alert("Lỗi tạo prompt mẫu: " + (e as Error).message);
+    }
+  };
+
+  const handleCopyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(samplePrompt);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      alert("Không copy được, hãy bôi đen và copy thủ công.");
+    }
+  };
+
+  const handleLoadPastedScript = async () => {
+    if (!pasteText.trim()) { alert("Dán kịch bản (từ AI của bạn) vào ô trước nhé!"); return; }
+    try {
+      const styleName = STYLES.find(s => s.id === selectedStyle)?.name || "Anime";
+      const { scenes } = await storyApi.parse(pasteText, styleName);
+      if (scenes.length === 0) { alert("Không tách được cảnh nào. Kiểm tra định dạng [Cảnh 1]..."); return; }
+      loadScenesIntoSlides(scenes);
+      alert(`Đã nạp ${scenes.length} cảnh vào slide!`);
+    } catch (e) {
+      alert("Lỗi nạp kịch bản: " + (e as Error).message);
+    }
+  };
 
   const handleImportNotebookLM = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isAuthenticated) {
@@ -265,25 +354,14 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
     }
     setIsExpanding(true);
     try {
-      const response = await fetch("/api/generate-story", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userPrompt: activeSlide.content,
-          style: STYLES.find(s => s.id === selectedStyle)?.name || "3D Clay"
-        })
-      });
-      const data = await response.json();
-      if (response.ok) {
-        const updated = slides.map(s => {
-          if (s.id === activeSlideId) {
-            return { ...s, content: data.script || data.prompt };
-          }
-          return s;
-        });
-        setSlides(updated);
-      } else {
-        alert("Lỗi từ máy chủ: " + (data.error || "Không thể gọi AI"));
+      const styleName = STYLES.find(s => s.id === selectedStyle)?.name || "3D Clay";
+      // WaveSpeed LLM (BE) mở rộng nội dung cảnh hiện tại (1 cảnh).
+      const { scenes } = await storyApi.generate(activeSlide.content, styleName, 1);
+      const expanded = scenes[0]?.text;
+      if (expanded) {
+        setSlides(slides.map(s =>
+          s.id === activeSlideId ? { ...s, content: expanded, imagePrompt: scenes[0].imagePrompt } : s
+        ));
       }
     } catch (err) {
       console.error(err);
@@ -385,7 +463,7 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
     setSlides(updated);
   };
 
-  const handleCreateVideo = () => {
+  const handleCreateVideo = async () => {
     if (!isAuthenticated) {
       onNavigate("login");
       return;
@@ -393,56 +471,60 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
     setIsRendering(true);
     setProgress(0);
     setRenderStep('queued');
-    setRenderedVideo(null);
-    setIsPlaying(false);
+    setRenderError(null);
+    setResultScenes(null);
+    setPreviewIdx(0);
+
+    const styleName = STYLES.find(s => s.id === selectedStyle)?.name || "Anime";
+    // Mỗi slide → 1 scene: content = lời thoại; ưu tiên imagePrompt sẵn có (AI/parse), else ghép.
+    const scenes = slides.map((s) => ({
+      text: s.content,
+      imagePrompt: s.imagePrompt || `${styleName} style, children storybook illustration. ${s.title}. ${s.content}`,
+    }));
+
+    try {
+      const { id } = await videosApi.create({
+        prompt: storyTitle || slides[0]?.content || "Câu chuyện của bé",
+        style: styleName,
+        aspectRatio,
+        durationSec: duration,
+        engine,
+        scenes,
+      });
+
+      // Poll tới khi completed | failed.
+      setRenderStep('drawing');
+      let done = false;
+      while (!done) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const { video, scenes: sc } = await videosApi.get(id);
+        setProgress(video.progress);
+        if (video.status === 'completed') {
+          setRenderStep('completed');
+          setResultScenes(sc);
+          setProgress(100);
+          done = true;
+        } else if (video.status === 'failed') {
+          setRenderError(video.error || "Tạo video thất bại. Vui lòng thử lại.");
+          done = true;
+        }
+      }
+    } catch (e) {
+      setRenderError((e as Error).message);
+    } finally {
+      setIsRendering(false);
+      onVideoCreated();
+    }
   };
 
+  // Tự chạy slideshow preview khi có kết quả (2.5s/cảnh).
   useEffect(() => {
-    let interval: any = null;
-    if (isRendering) {
-      interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setRenderStep('completed');
-            setIsRendering(false);
-            
-            const finalTitle = storyTitle || "Cuộc phiêu lưu kỳ diệu " + new Date().toLocaleDateString('vi-VN');
-            const styleName = STYLES.find(s => s.id === selectedStyle)?.name || "Anime";
-            const coverImg = STYLES.find(s => s.id === selectedStyle)?.coverImage || "https://lh3.googleusercontent.com/aida-public/AB6AXuAGRMABwkcsNkB6cazPtEcY1MX5dp...";
-            
-            const compiledPrompt = slides.map((s, idx) => `[Cảnh ${idx + 1}: ${s.title}]\n${s.content}`).join("\n\n");
-
-            const newVideo: VideoItem = {
-              id: "gen-" + Date.now(),
-              title: finalTitle,
-              date: new Date().toLocaleDateString('vi-VN'),
-              duration: `00:${duration < 10 ? '0' + duration : duration}`,
-              style: styleName,
-              prompt: compiledPrompt,
-              aspectRatio: aspectRatio,
-              status: "completed",
-              progress: 100,
-              voiceId: "bena",
-              coverImage: coverImg,
-              expirationDaysLeft: 7
-            };
-
-            setRenderedVideo(newVideo);
-            onVideoCreated(newVideo);
-            return 100;
-          }
-
-          const nextProgress = prev + 5;
-          if (nextProgress > 30 && nextProgress < 85) {
-            setRenderStep('drawing');
-          }
-          return nextProgress;
-        });
-      }, 250);
-    }
-    return () => clearInterval(interval);
-  }, [isRendering, duration, selectedStyle, aspectRatio, slides, storyTitle]);
+    if (!resultScenes || resultScenes.length === 0) return;
+    const t = setInterval(() => {
+      setPreviewIdx((i) => (i + 1) % resultScenes.length);
+    }, 2500);
+    return () => clearInterval(t);
+  }, [resultScenes]);
 
   return (
     <div className="min-h-screen bg-[#FFFDF7] pb-24 md:pb-12 pt-10">
@@ -478,6 +560,129 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
               className="hidden"
             />
           </label>
+        </div>
+
+        {/* Tạo kịch bản: AI tự động (WaveSpeed LLM) hoặc Prompt mẫu thủ công */}
+        <div className="bg-white rounded-3xl border border-surface-container shadow-sm overflow-hidden">
+          <div className="flex border-b border-surface-container">
+            <button
+              onClick={() => setScriptTab('ai')}
+              className={`flex-1 py-3 text-xs font-black uppercase tracking-wider transition-colors ${scriptTab === 'ai' ? 'bg-[#6bbf3a]/10 text-[#2d6c00]' : 'text-outline hover:bg-surface-container'}`}
+            >
+              🧠 AI tự động viết
+            </button>
+            <button
+              onClick={() => setScriptTab('template')}
+              className={`flex-1 py-3 text-xs font-black uppercase tracking-wider transition-colors ${scriptTab === 'template' ? 'bg-[#6bbf3a]/10 text-[#2d6c00]' : 'text-outline hover:bg-surface-container'}`}
+            >
+              📝 Prompt mẫu (tự dán)
+            </button>
+          </div>
+
+          <div className="p-5">
+            {scriptTab === 'ai' ? (
+              <div className="space-y-3">
+                <p className="text-xs text-outline font-medium">Nhập ý tưởng, AI (WaveSpeed) sẽ viết kịch bản phân cảnh và nạp thẳng vào slide.</p>
+                <textarea
+                  value={aiIdea}
+                  onChange={(e) => setAiIdea(e.target.value)}
+                  placeholder="Vd: Chú thỏ con học cách chia sẻ với bạn trong khu rừng..."
+                  className="w-full h-20 p-3 bg-[#FFFDF7] border-2 border-outline-variant focus:border-[#2d6c00] outline-none rounded-xl text-sm resize-none"
+                />
+                <div className="flex items-center gap-3 flex-wrap">
+                  <label className="text-xs font-bold text-outline flex items-center gap-1">
+                    Số cảnh:
+                    <input type="number" min={1} max={20} value={aiSceneCount}
+                      onChange={(e) => setAiSceneCount(Math.max(1, Math.min(20, Number(e.target.value))))}
+                      className="w-16 p-1.5 border border-outline rounded-lg text-center" />
+                  </label>
+                  <button
+                    onClick={handleAIGenerate}
+                    disabled={aiLoading}
+                    className="px-5 py-2.5 bg-gradient-to-r from-[#6bbf3a] to-[#2d6c00] text-white rounded-full text-xs font-extrabold shadow-sm disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    <Wand2 className="w-4 h-4" /> {aiLoading ? 'Đang viết...' : 'AI viết kịch bản'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-xs text-outline font-medium">Chọn tuỳ chọn → nhận prompt mẫu → copy đưa cho AI của bạn (ChatGPT/Gemini...) → dán kịch bản trả về vào ô dưới.</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs font-bold">
+                  <label className="space-y-1">
+                    <span className="text-[10px] text-outline uppercase block">Số nhân vật</span>
+                    <input type="number" min={1} max={8} value={tmplForm.characterCount}
+                      onChange={(e) => setTmplForm({ ...tmplForm, characterCount: Number(e.target.value) })}
+                      className="w-full p-2 border border-outline rounded-lg" />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[10px] text-outline uppercase block">Thể loại</span>
+                    <select value={tmplForm.genre} onChange={(e) => setTmplForm({ ...tmplForm, genre: e.target.value })}
+                      className="w-full p-2 border border-outline rounded-lg bg-white">
+                      <option value="">— Chọn —</option>
+                      {tmplOptions?.genres.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[10px] text-outline uppercase block">Cốt truyện</span>
+                    <select value={tmplForm.plotType} onChange={(e) => setTmplForm({ ...tmplForm, plotType: e.target.value })}
+                      className="w-full p-2 border border-outline rounded-lg bg-white">
+                      <option value="">— Chọn —</option>
+                      {tmplOptions?.plots.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[10px] text-outline uppercase block">Độ tuổi</span>
+                    <select value={tmplForm.ageRange} onChange={(e) => setTmplForm({ ...tmplForm, ageRange: e.target.value })}
+                      className="w-full p-2 border border-outline rounded-lg bg-white">
+                      <option value="">— Chọn —</option>
+                      {tmplOptions?.ageRanges.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[10px] text-outline uppercase block">Số cảnh</span>
+                    <input type="number" min={1} max={20} value={tmplForm.sceneCount}
+                      onChange={(e) => setTmplForm({ ...tmplForm, sceneCount: Number(e.target.value) })}
+                      className="w-full p-2 border border-outline rounded-lg" />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[10px] text-outline uppercase block">Nhân vật chính (tuỳ chọn)</span>
+                    <input type="text" value={tmplForm.mainCharacter}
+                      onChange={(e) => setTmplForm({ ...tmplForm, mainCharacter: e.target.value })}
+                      placeholder="Vd: Thỏ Bông"
+                      className="w-full p-2 border border-outline rounded-lg" />
+                  </label>
+                </div>
+                <button onClick={handleBuildTemplate}
+                  className="px-5 py-2.5 bg-[#4bafff]/15 text-[#00639c] border border-[#4bafff]/30 rounded-full text-xs font-extrabold">
+                  ✨ Tạo prompt mẫu
+                </button>
+
+                {samplePrompt && (
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <textarea readOnly value={samplePrompt}
+                        className="w-full h-32 p-3 bg-[#f5f3ee] border border-surface-container rounded-xl text-xs font-mono resize-none" />
+                      <button onClick={handleCopyPrompt}
+                        className="absolute top-2 right-2 px-3 py-1 bg-[#2d6c00] text-white rounded-full text-[10px] font-bold">
+                        {copied ? '✓ Đã copy' : 'Copy'}
+                      </button>
+                    </div>
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] text-outline uppercase font-black block">Dán kịch bản AI trả về</span>
+                      <textarea value={pasteText} onChange={(e) => setPasteText(e.target.value)}
+                        placeholder="Dán kịch bản (có [Cảnh 1], [Cảnh 2]...) vào đây rồi bấm Nạp vào slide"
+                        className="w-full h-28 p-3 bg-[#FFFDF7] border-2 border-outline-variant focus:border-[#2d6c00] outline-none rounded-xl text-xs resize-none" />
+                      <button onClick={handleLoadPastedScript}
+                        className="px-5 py-2.5 bg-gradient-to-r from-[#6bbf3a] to-[#2d6c00] text-white rounded-full text-xs font-extrabold">
+                        ⬇ Nạp vào slide
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Canva-like workspace layout */}
@@ -568,8 +773,8 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
             {/* Editor Canvas Container inside center grid */}
             <div className="flex-grow flex items-center justify-center py-4">
               
-              {!isRendering && !renderedVideo ? (
-                <div 
+              {!isRendering && !resultScenes && !renderError ? (
+                <div
                   className={`w-full max-w-xl aspect-video rounded-3xl shadow-lg border-2 border-surface-container p-8 flex flex-col justify-center relative overflow-hidden transition-all duration-300 ${activeSlide.gradientPreset || ''}`}
                   style={{ 
                     backgroundColor: activeSlide.gradientPreset ? undefined : activeSlide.backgroundColor,
@@ -612,9 +817,11 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
                     <span className="text-4xl">🌿</span>
                   </div>
                   <div className="space-y-3 w-full max-w-xs">
-                    <h4 className="font-heading text-base font-black text-[#2d6c00]">Đang tạo slide kịch bản câu chuyện...</h4>
+                    <h4 className="font-heading text-base font-black text-[#2d6c00]">
+                      {renderStep === 'queued' ? 'Đang xếp hàng...' : 'AI đang vẽ từng cảnh câu chuyện...'}
+                    </h4>
                     <div className="w-full h-3 bg-surface-container rounded-full overflow-hidden shadow-inner border border-surface-container-high relative">
-                      <div 
+                      <div
                         className="h-full bg-gradient-to-r from-[#6bbf3a] to-[#2d6c00] rounded-full transition-all duration-300"
                         style={{ width: `${renderProgress}%` }}
                       ></div>
@@ -622,31 +829,42 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
                     <span className="text-xs font-black text-outline">{renderProgress}% Hoàn tất</span>
                   </div>
                 </div>
+              ) : renderError ? (
+                <div className="w-full max-w-xl aspect-video bg-red-50 rounded-3xl border-2 border-red-200 shadow-md p-8 flex flex-col items-center justify-center text-center space-y-3">
+                  <span className="text-4xl">😿</span>
+                  <h4 className="font-heading text-base font-black text-red-600">Tạo video chưa thành công</h4>
+                  <p className="text-xs text-red-500 font-bold max-w-sm">{renderError}</p>
+                </div>
               ) : (
                 <div className="w-full max-w-xl aspect-video rounded-3xl overflow-hidden shadow-lg bg-black relative group">
-                  {isPlaying ? (
-                    <video
-                      src="https://assets.mixkit.co/videos/preview/mixkit-forest-stream-in-the-sunlight-529-large.mp4"
-                      autoPlay
-                      controls
-                      className="w-full h-full object-cover"
-                      onEnded={() => setIsPlaying(false)}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex flex-col justify-center items-center">
-                      <img
-                        src={renderedVideo?.coverImage}
-                        alt="cover"
-                        className="absolute inset-0 w-full h-full object-cover filter brightness-70"
-                      />
-                      <button
-                        onClick={() => setIsPlaying(true)}
-                        className="bg-white/95 rounded-full p-4 text-[#2d6c00] shadow-xl hover:scale-110 transition-transform cursor-pointer relative z-10"
-                      >
-                        <Play className="w-10 h-10 fill-[#2d6c00] translate-x-0.5" />
-                      </button>
-                    </div>
-                  )}
+                  {/* Preview slideshow từ ảnh/clip AI thật của từng cảnh */}
+                  {(() => {
+                    const scene = resultScenes?.[previewIdx];
+                    if (!scene) return null;
+                    if (scene.clipUrl) {
+                      return (
+                        <video src={scene.clipUrl} autoPlay muted loop controls className="w-full h-full object-cover" />
+                      );
+                    }
+                    return (
+                      <div className="absolute inset-0">
+                        {scene.imageUrl ? (
+                          <img src={scene.imageUrl} alt={`Cảnh ${previewIdx + 1}`} className="absolute inset-0 w-full h-full object-cover animate-[kenburns_2.5s_ease-out]" />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center bg-[#0d0d0d] text-white/50 text-xs">Cảnh chưa có ảnh</div>
+                        )}
+                        {scene.audioUrl && <audio src={scene.audioUrl} autoPlay />}
+                        <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/70 to-transparent">
+                          <p className="text-white text-[11px] font-bold line-clamp-2">{scene.text}</p>
+                        </div>
+                        <div className="absolute top-3 left-3 flex gap-1">
+                          {resultScenes!.map((_, i) => (
+                            <span key={i} className={`w-2 h-2 rounded-full ${i === previewIdx ? 'bg-white' : 'bg-white/40'}`} />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>
@@ -823,7 +1041,7 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
               {/* Style picker */}
               <div className="space-y-1.5">
                 <label className="text-[10px] text-outline font-black uppercase tracking-wider block">Mỹ thuật video hoạt họa</label>
-                <select 
+                <select
                   value={selectedStyle}
                   onChange={(e) => setSelectedStyle(e.target.value)}
                   className="w-full text-xs font-bold py-2 px-3 border border-outline rounded-xl bg-white"
@@ -834,22 +1052,53 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
                 </select>
               </div>
 
+              {/* Engine picker: slideshow ảnh (rẻ) hoặc video AI thật (t2v) */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-outline font-black uppercase tracking-wider block">Kiểu tạo video</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setEngine('slideshow')}
+                    className={`flex-grow py-2 border rounded-xl text-[11px] font-extrabold flex items-center justify-center transition-all ${
+                      engine === 'slideshow' ? 'border-[#2d6c00] bg-[#6bbf3a]/15 text-[#2d6c00]' : 'border-outline hover:bg-surface-container'
+                    }`}
+                  >
+                    🖼️ Slideshow (rẻ)
+                  </button>
+                  <button
+                    onClick={() => setEngine('t2v')}
+                    className={`flex-grow py-2 border rounded-xl text-[11px] font-extrabold flex items-center justify-center transition-all ${
+                      engine === 't2v' ? 'border-[#2d6c00] bg-[#6bbf3a]/15 text-[#2d6c00]' : 'border-outline hover:bg-surface-container'
+                    }`}
+                  >
+                    🎬 Video AI (cao cấp)
+                  </button>
+                </div>
+              </div>
+
               {/* Submit CTA */}
-              {!renderedVideo ? (
+              {!resultScenes ? (
                 <button
                   onClick={handleCreateVideo}
                   disabled={isRendering || isExpanding}
-                  className="w-full py-4.5 bg-gradient-to-r from-[#F5B82E] to-[#FF9F40] text-white rounded-full font-extrabold text-xs shadow-md hover:scale-102 transition-transform cursor-pointer button-3d-yellow"
+                  className="w-full py-4.5 bg-gradient-to-r from-[#F5B82E] to-[#FF9F40] text-white rounded-full font-extrabold text-xs shadow-md hover:scale-102 transition-transform cursor-pointer button-3d-yellow disabled:opacity-50"
                 >
-                  <span>✨ Hoàn tất chuẩn bị slide & tiếp tục workflow</span>
+                  <span>{isRendering ? '⏳ Đang tạo video...' : '✨ Tạo video hoạt hình'}</span>
                 </button>
               ) : (
-                <button
-                  onClick={() => onNavigate("workflow")}
-                  className="w-full py-4.5 bg-[#2d6c00] text-white rounded-full font-extrabold text-xs shadow-md hover:scale-102 transition-transform cursor-pointer"
-                >
-                  <span>➜ Tiếp tục cấu hình Workflow</span>
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => onNavigate("dashboard")}
+                    className="w-full py-4.5 bg-[#2d6c00] text-white rounded-full font-extrabold text-xs shadow-md hover:scale-102 transition-transform cursor-pointer"
+                  >
+                    <span>🎉 Xem trong Tác phẩm của bé</span>
+                  </button>
+                  <button
+                    onClick={() => { setResultScenes(null); setProgress(0); }}
+                    className="w-full py-2.5 border border-outline text-outline rounded-full font-bold text-[11px] hover:bg-surface-container"
+                  >
+                    Tạo video mới
+                  </button>
+                </div>
               )}
             </div>
 
