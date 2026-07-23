@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { 
   Sparkles, 
@@ -141,6 +141,15 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
 
   const activeSlideIndex = slides.findIndex(s => s.id === activeSlideId);
   const activeSlide = slides[activeSlideIndex >= 0 ? activeSlideIndex : 0];
+
+  // Cờ huỷ: dừng vòng poll khi component unmount (tránh setState sau unmount).
+  const cancelledRef = useRef(false);
+  useEffect(() => {
+    cancelledRef.current = false;
+    return () => {
+      cancelledRef.current = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -411,17 +420,9 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
         ));
       }
     } catch (err) {
+      // KHÔNG chèn nội dung giả — user phải biết AI thật sự lỗi.
       console.error(err);
-      const updated = slides.map(s => {
-        if (s.id === activeSlideId) {
-          return {
-            ...s,
-            content: `${s.content}\n\n[Ý tưởng mở rộng] Cảnh vẽ chi tiết bối cảnh xung quanh rực rỡ sắc màu, nhân vật vui vẻ hoạt náo.`
-          };
-        }
-        return s;
-      });
-      setSlides(updated);
+      alert("Không gọi được AI để mở rộng nội dung: " + (err as Error).message);
     } finally {
       setIsExpanding(false);
     }
@@ -598,11 +599,18 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
         scenes: scenesInput,
       });
 
-      // Poll tới khi completed | failed.
+      // Poll tới khi completed | failed — CÓ giới hạn để không treo vô hạn khi
+      // job kẹt (vd WaveSpeed hết credit) và dừng khi component unmount.
       setRenderStep('drawing');
+      const POLL_MS = 2000;
+      const MAX_MINUTES = 15;
+      const maxAttempts = Math.ceil((MAX_MINUTES * 60_000) / POLL_MS);
       let done = false;
+      let attempts = 0;
       while (!done) {
-        await new Promise((r) => setTimeout(r, 2000));
+        await new Promise((r) => setTimeout(r, POLL_MS));
+        if (cancelledRef.current) return; // đã rời trang / huỷ
+        attempts++;
         const { video, scenes: sc } = await videosApi.get(id);
         setProgress(video.progress);
         if (video.status === 'completed') {
@@ -612,6 +620,11 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
           done = true;
         } else if (video.status === 'failed') {
           setRenderError(video.error || "Tạo video thất bại. Vui lòng thử lại.");
+          done = true;
+        } else if (attempts >= maxAttempts) {
+          setRenderError(
+            `Quá ${MAX_MINUTES} phút mà video chưa xong. Job có thể bị kẹt (hết credit WaveSpeed?). Xem lại trong "Tác phẩm của bé".`,
+          );
           done = true;
         }
       }

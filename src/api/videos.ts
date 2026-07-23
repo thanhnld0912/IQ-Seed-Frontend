@@ -21,11 +21,14 @@ export interface SceneDto {
   id: string;
   idx: number;
   role: string;
+  title: string;
   text: string;
   imageUrl: string | null;
   clipUrl: string | null;
   audioUrl: string | null;
   transition: string;
+  durationSec: number;
+  voiceId: string | null;
   status: string;
 }
 
@@ -52,6 +55,8 @@ export interface CreateVideoInput {
     text: string;
     imagePrompt: string;
     role?: string;
+    voiceId?: string;
+    duration?: number;
   }[];
 }
 
