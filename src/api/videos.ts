@@ -38,7 +38,21 @@ export interface CreateVideoInput {
   sceneCount?: number;
   imageModel?: string;
   videoModel?: string;
-  scenes?: { text: string; imagePrompt: string; transition?: string; role?: string }[];
+  storyboard?: {
+    title: string;
+    slides: any[];
+  };
+  scenes?: {
+    sceneIndex: number;
+    title: string;
+    description: string;
+    transition: string;
+    isIntro: boolean;
+    isOutro: boolean;
+    text: string;
+    imagePrompt: string;
+    role?: string;
+  }[];
 }
 
 export interface ModelInfo {
