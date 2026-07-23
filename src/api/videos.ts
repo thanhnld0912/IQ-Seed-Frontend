@@ -13,6 +13,8 @@ export interface VideoDto {
   coverUrl: string | null;
   finalUrl: string | null;
   error: string | null;
+  /** Lỗi riêng của bước ghép MP4 (video/các cảnh vẫn còn nguyên). */
+  exportError: string | null;
   expiresAt: string;
   createdAt: string;
 }
@@ -83,6 +85,10 @@ export const videosApi = {
   get: (id: string) => apiGet<{ video: VideoDto; scenes: SceneDto[] }>(`/api/videos/${id}`),
   create: (input: CreateVideoInput) => apiPost<{ id: string }>('/api/videos', input),
   remove: (id: string) => apiDelete<{ ok: boolean }>(`/api/videos/${id}`),
+
+  /** Xếp hàng ghép toàn bộ cảnh thành 1 file MP4 (worker FFmpeg xử lý). */
+  exportMp4: (id: string) =>
+    apiPost<{ jobId: string; status: string; reused?: boolean }>(`/api/videos/${id}/export`, {}),
   models: (kind?: string) =>
     apiGet<{ models: ModelInfo[] }>(`/api/models${kind ? `?kind=${kind}` : ''}`),
 };
