@@ -69,7 +69,14 @@ export interface CreateVideoInput {
     role?: string;
     voiceId?: string;
     duration?: number;
+    /** Nhân vật có mặt / đang thoại — để BE gắn nhân vật vào cảnh. */
+    characters?: string[];
+    speaker?: string;
   }[];
+  /** Dàn nhân vật (từ /api/story/generate) — BẮT BUỘC gửi kèm khi tự truyền scenes,
+   *  nếu không nhân vật sẽ không được tạo và mất tính nhất quán. */
+  characters?: { name: string; appearance: string }[];
+  styleBible?: string;
 }
 
 export interface ModelInfo {

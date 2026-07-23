@@ -38,7 +38,7 @@ import {
 import { STYLES } from "../data";
 import { useAuth } from "../context/AuthContext";
 import { videosApi, SceneDto } from "../api/videos";
-import { storyApi, TemplateOptions } from "../api/story";
+import { storyApi, type StoryCharacter, type StoryScene, TemplateOptions } from "../api/story";
 import { voicesApi, type VoiceItemDto } from "../api/voices";
 
 interface CreativeWorkspaceViewProps {
@@ -64,6 +64,9 @@ interface Slide {
   images?: string[];
   duration?: number;
   notes?: string;
+  /** Nhân vật có mặt trong cảnh + ai đang thoại (dùng cho tính nhất quán). */
+  sceneCharacters?: string[];
+  speaker?: string;
 }
 
 export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: CreativeWorkspaceViewProps) {
@@ -137,6 +140,11 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
   const [voiceList, setVoiceList] = useState<VoiceItemDto[]>([]);
   const [defaultVoiceId, setDefaultVoiceId] = useState("");
 
+  // Dàn nhân vật + phong cách chung do AI sinh — PHẢI gửi kèm khi tạo video,
+  // nếu không BE không tạo được nhân vật ⇒ mất tính nhất quán giữa các cảnh.
+  const [cast, setCast] = useState<StoryCharacter[]>([]);
+  const [styleBible, setStyleBible] = useState("");
+
   // Preview Mode states
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
@@ -170,7 +178,7 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
   }, [isAuthenticated]);
 
   // Đổ danh sách cảnh (AI/parse) vào slide editor.
-  const loadScenesIntoSlides = (scenes: { text: string; imagePrompt: string }[]) => {
+  const loadScenesIntoSlides = (scenes: StoryScene[]) => {
     if (scenes.length === 0) return;
     const mapped: Slide[] = scenes.map((s, idx) => ({
       id: `slide-${Date.now()}-${idx}`,
@@ -183,11 +191,16 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
       isBold: false,
       isItalic: false,
       gradientPreset: idx % 2 === 0 ? "bg-gradient-to-tr from-[#ffecd2] to-[#fcb69f]" : "bg-gradient-to-tr from-[#a1c4fd] to-[#c2e9fb]",
-      transition: "none",
+      // 'fade' thay 'none': mặc định 'none' khiến phim xuất ra không hề có
+      // chuyển cảnh (worker rơi hết vào nhánh concat thẳng).
+      transition: "fade",
       isIntro: idx === 0,
       isOutro: idx === scenes.length - 1,
       duration: 5,
-      notes: ""
+      notes: "",
+      // Giữ nhân vật/người thoại của cảnh để gửi lên khi tạo video.
+      sceneCharacters: s.characters ?? [],
+      speaker: s.speaker,
     }));
     setSlides(mapped);
     setActiveSlideId(mapped[0].id);
@@ -199,8 +212,14 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
     setAiLoading(true);
     try {
       const styleName = STYLES.find(s => s.id === selectedStyle)?.name || "Anime";
-      const { title, scenes } = await storyApi.generate(aiIdea, styleName, aiSceneCount);
+      const { title, scenes, characters, styleBible: sb } = await storyApi.generate(
+        aiIdea, styleName, aiSceneCount,
+      );
       if (title) setStoryTitle(title);
+      // GIỮ LẠI cast + style bible — trước đây bị vứt đi nên nhân vật không bao
+      // giờ tới được POST /api/videos.
+      setCast(characters ?? []);
+      setStyleBible(sb ?? "");
       loadScenesIntoSlides(scenes);
     } catch (e) {
       alert("Lỗi tạo kịch bản: " + (e as Error).message);
@@ -598,7 +617,11 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
       isOutro: s.isOutro || false,
       text: s.content,
       imagePrompt: s.imagePrompt || `${styleName} style, children storybook illustration. ${s.title}. ${s.content}`,
-      voiceId: s.voiceId || defaultVoiceId
+      voiceId: s.voiceId || defaultVoiceId,
+      // Thiếu 2 field này thì BE mặc định 5s/cảnh ⇒ phim sai độ dài mong muốn.
+      duration: s.duration || 5,
+      characters: s.sceneCharacters ?? [],
+      speaker: s.speaker,
     }));
 
     try {
@@ -610,6 +633,10 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
         engine,
         storyboard: storyboardInput,
         scenes: scenesInput,
+        // Không gửi 2 field này thì BE bỏ qua nhánh nhân vật ⇒ mỗi cảnh vẽ độc
+        // lập và nhân vật sẽ khác nhau giữa các cảnh.
+        characters: cast,
+        styleBible: styleBible || undefined,
       });
 
       // Poll tới khi completed | failed — CÓ giới hạn để không treo vô hạn khi
