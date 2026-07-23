@@ -38,6 +38,17 @@ export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
   return data as T;
 }
 
+export async function apiPut<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as any).error ?? 'Lỗi server');
+  return data as T;
+}
+
 export async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: 'PATCH',
