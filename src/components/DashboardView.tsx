@@ -21,6 +21,47 @@ export default function DashboardView({ videos, onPlayVideo, onDeleteVideo, onNa
   const [previewIdx, setPreviewIdx] = useState(0);
   const [loadingPreview, setLoadingPreview] = useState<string | null>(null);
 
+  // Xuất MP4: id video đang ghép → URL kết quả khi xong.
+  const [exporting, setExporting] = useState<Record<string, boolean>>({});
+  const [exported, setExported] = useState<Record<string, string>>({});
+  const cancelledRef = React.useRef(false);
+  React.useEffect(() => {
+    cancelledRef.current = false;
+    return () => { cancelledRef.current = true; };
+  }, []);
+
+  const handleExport = async (video: VideoItem) => {
+    setExporting((m) => ({ ...m, [video.id]: true }));
+    try {
+      await videosApi.exportMp4(video.id);
+      // Worker chạy nền → poll tới khi có finalUrl (tối đa ~10 phút).
+      const MAX = 200;
+      for (let i = 0; i < MAX; i++) {
+        await new Promise((r) => setTimeout(r, 3000));
+        if (cancelledRef.current) return;
+        const { video: v } = await videosApi.get(video.id);
+        if (v.finalUrl) {
+          setExported((m) => ({ ...m, [video.id]: v.finalUrl! }));
+          return;
+        }
+        // Export hỏng giữ status='completed' (cảnh vẫn nguyên) → bắt qua exportError.
+        if (v.exportError) {
+          alert('Ghép video thất bại: ' + v.exportError);
+          return;
+        }
+        if (v.status === 'failed') {
+          alert('Ghép video thất bại: ' + (v.error ?? 'không rõ nguyên nhân'));
+          return;
+        }
+      }
+      alert('Ghép video lâu hơn dự kiến. Kiểm tra lại sau — worker vẫn đang chạy.');
+    } catch (e) {
+      alert('Không xuất được video: ' + (e as Error).message);
+    } finally {
+      setExporting((m) => ({ ...m, [video.id]: false }));
+    }
+  };
+
   const styles = useMemo(
     () => Array.from(new Set(videos.map((v) => v.style).filter(Boolean))),
     [videos],
@@ -205,16 +246,44 @@ export default function DashboardView({ videos, onPlayVideo, onDeleteVideo, onNa
                     </div>
 
                     <div className="flex gap-2 pt-2 border-t border-surface-container justify-end">
-                      <a
-                        href={video.finalUrl || video.coverImage}
-                        download
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex-grow py-2 border-2 border-dashed border-outline-variant hover:border-[#2d6c00] text-outline hover:text-[#2d6c00] transition-colors rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
-                        title="Tải về máy trước khi hết hạn"
-                      >
-                        <Download className="w-3.5 h-3.5" /> Tải về
-                      </a>
+                      {(() => {
+                        const finalUrl = exported[video.id] || video.finalUrl;
+                        if (finalUrl) {
+                          return (
+                            <a
+                              href={finalUrl}
+                              download
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex-grow py-2 bg-[#2d6c00] text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-1 cursor-pointer"
+                              title="Tải phim hoàn chỉnh (MP4)"
+                            >
+                              <Download className="w-3.5 h-3.5" /> Tải MP4
+                            </a>
+                          );
+                        }
+                        if (isDone) {
+                          return (
+                            <button
+                              onClick={() => handleExport(video)}
+                              disabled={exporting[video.id]}
+                              className="flex-grow py-2 border-2 border-dashed border-outline-variant hover:border-[#2d6c00] text-outline hover:text-[#2d6c00] transition-colors rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer disabled:opacity-60"
+                              title="Ghép tất cả cảnh thành 1 file MP4"
+                            >
+                              {exporting[video.id] ? (
+                                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang ghép phim...</>
+                              ) : (
+                                <><Film className="w-3.5 h-3.5" /> Xuất MP4</>
+                              )}
+                            </button>
+                          );
+                        }
+                        return (
+                          <span className="flex-grow py-2 text-center text-[11px] font-bold text-outline">
+                            Chờ tạo xong cảnh
+                          </span>
+                        );
+                      })()}
                       <button
                         onClick={() => onDeleteVideo(video.id)}
                         className="p-2 border-2 border-red-100 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition-colors cursor-pointer"
