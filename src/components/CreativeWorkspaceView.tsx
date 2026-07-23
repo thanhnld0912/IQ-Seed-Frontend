@@ -39,6 +39,7 @@ import { STYLES } from "../data";
 import { useAuth } from "../context/AuthContext";
 import { videosApi, SceneDto } from "../api/videos";
 import { storyApi, TemplateOptions } from "../api/story";
+import { voicesApi, type VoiceItemDto } from "../api/voices";
 
 interface CreativeWorkspaceViewProps {
   onVideoCreated: () => void;
@@ -132,6 +133,10 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
   const [pasteText, setPasteText] = useState("");
   const [copied, setCopied] = useState(false);
 
+  // Giọng đọc (thật, lấy từ BE) — dùng cho từng slide.
+  const [voiceList, setVoiceList] = useState<VoiceItemDto[]>([]);
+  const [defaultVoiceId, setDefaultVoiceId] = useState("");
+
   // Preview Mode states
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
@@ -154,6 +159,14 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
   useEffect(() => {
     if (!isAuthenticated) return;
     storyApi.templateOptions().then(setTmplOptions).catch(() => {});
+    // Giọng thật từ BE — thay cho giá trị hardcode trước đây.
+    voicesApi
+      .list()
+      .then((r) => {
+        setVoiceList(r.voices);
+        if (r.voices[0]) setDefaultVoiceId(r.voices[0].voiceId);
+      })
+      .catch(() => {});
   }, [isAuthenticated]);
 
   // Đổ danh sách cảnh (AI/parse) vào slide editor.
@@ -569,7 +582,7 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
         transition: s.transition || "none",
         isIntro: s.isIntro || false,
         isOutro: s.isOutro || false,
-        voiceId: s.voiceId || "bena",
+        voiceId: s.voiceId || defaultVoiceId,
         images: s.images || [],
         duration: s.duration || 5,
         notes: s.notes || ""
@@ -585,7 +598,7 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
       isOutro: s.isOutro || false,
       text: s.content,
       imagePrompt: s.imagePrompt || `${styleName} style, children storybook illustration. ${s.title}. ${s.content}`,
-      voiceId: s.voiceId || "bena"
+      voiceId: s.voiceId || defaultVoiceId
     }));
 
     try {
@@ -1253,6 +1266,21 @@ export default function CreativeWorkspaceView({ onVideoCreated, onNavigate }: Cr
                     />
                     <span>🎬 Cảnh Outro</span>
                   </label>
+                </div>
+
+                {/* Voice Selection (giọng đọc cho cảnh này) */}
+                <div className="space-y-1">
+                  <label className="text-[9px] text-outline uppercase block">Giọng đọc cảnh này</label>
+                  <select
+                    value={activeSlide.voiceId || defaultVoiceId}
+                    onChange={(e) => updateActiveSlide({ voiceId: e.target.value })}
+                    className="w-full text-xs font-bold py-2 px-3 border border-outline rounded-xl bg-white focus:outline-none"
+                  >
+                    {voiceList.length === 0 && <option value="">Đang tải giọng...</option>}
+                    {voiceList.map((v) => (
+                      <option key={v.id} value={v.voiceId}>{v.name}</option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Transition Selection */}
