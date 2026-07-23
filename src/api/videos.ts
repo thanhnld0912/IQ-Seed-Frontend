@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiDelete } from './client';
+import { apiGet, apiPost, apiPatch, apiDelete } from './client';
 
 export interface VideoDto {
   id: string;
@@ -32,6 +32,16 @@ export interface SceneDto {
   durationSec: number;
   voiceId: string | null;
   status: string;
+}
+
+/** Nhân vật của phim — giữ diện mạo & giọng nhất quán xuyên suốt. */
+export interface CharacterDto {
+  id: string;
+  name: string;
+  appearance: string;
+  refImageUrl: string | null;
+  voiceId: string | null;
+  status: 'pending' | 'rendering' | 'ready' | 'failed';
 }
 
 export interface CreateVideoInput {
@@ -82,7 +92,15 @@ export const videosApi = {
     const suffix = qs.toString() ? `?${qs}` : '';
     return apiGet<{ videos: VideoDto[] }>(`/api/videos${suffix}`);
   },
-  get: (id: string) => apiGet<{ video: VideoDto; scenes: SceneDto[] }>(`/api/videos/${id}`),
+  get: (id: string) =>
+    apiGet<{ video: VideoDto; scenes: SceneDto[]; characters: CharacterDto[] }>(`/api/videos/${id}`),
+
+  /** Đổi giọng (hoặc ngoại hình) của 1 nhân vật → áp cho mọi cảnh nhân vật đó thoại. */
+  updateCharacter: (
+    videoId: string,
+    charId: string,
+    patch: { voiceId?: string; voiceProvider?: string; appearance?: string; name?: string },
+  ) => apiPatch<{ ok: boolean }>(`/api/videos/${videoId}/characters/${charId}`, patch),
   create: (input: CreateVideoInput) => apiPost<{ id: string }>('/api/videos', input),
   remove: (id: string) => apiDelete<{ ok: boolean }>(`/api/videos/${id}`),
 

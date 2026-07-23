@@ -8,7 +8,7 @@ import {
   type TtsProvider,
   type VoiceItemDto,
 } from "../api/voices";
-import { videosApi, type VideoDto } from "../api/videos";
+import { videosApi, type CharacterDto, type VideoDto } from "../api/videos";
 
 const DEFAULT_TEXT = "Xin chào các bé, hôm nay chúng ta cùng nghe kể chuyện nhé!";
 
@@ -35,6 +35,9 @@ export default function VoiceOverView() {
   const [targetVideo, setTargetVideo] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [assignMsg, setAssignMsg] = useState<string | null>(null);
+
+  // Nhân vật của phim đang chọn → gán giọng riêng cho từng nhân vật.
+  const [characters, setCharacters] = useState<CharacterDto[]>([]);
 
   // Ghi âm THẬT (MediaRecorder)
   const [isRecording, setIsRecording] = useState(false);
@@ -91,6 +94,21 @@ export default function VoiceOverView() {
       setError((e as Error).message);
     } finally {
       setPreviewing(false);
+    }
+  };
+
+  // Tải nhân vật khi đổi phim.
+  useEffect(() => {
+    if (!targetVideo) { setCharacters([]); return; }
+    videosApi.get(targetVideo).then((r) => setCharacters(r.characters ?? [])).catch(() => setCharacters([]));
+  }, [targetVideo]);
+
+  const handleCharacterVoice = async (charId: string, voiceId: string) => {
+    setCharacters((cs) => cs.map((c) => (c.id === charId ? { ...c, voiceId } : c)));
+    try {
+      await videosApi.updateCharacter(targetVideo, charId, { voiceId, voiceProvider: provider });
+    } catch (e) {
+      setError((e as Error).message);
     }
   };
 
@@ -297,6 +315,41 @@ export default function VoiceOverView() {
                   <option key={v.id} value={v.id}>{v.title || 'Chưa đặt tên'} ({v.style})</option>
                 ))}
               </select>
+              {/* Nhân vật: mỗi nhân vật 1 giọng riêng → giữ giọng nhất quán cả phim */}
+              {characters.length > 0 && (
+                <div className="space-y-2 bg-[#f5f3ee] p-3 rounded-2xl border border-surface-container">
+                  <span className="text-[10px] text-outline font-black uppercase tracking-wider block">
+                    Giọng riêng cho từng nhân vật
+                  </span>
+                  {characters.map((c) => (
+                    <div key={c.id} className="flex items-center gap-2">
+                      {c.refImageUrl ? (
+                        <img src={c.refImageUrl} alt={c.name}
+                          className="w-9 h-9 rounded-lg object-cover border border-outline-variant flex-shrink-0" />
+                      ) : (
+                        <div className="w-9 h-9 rounded-lg bg-surface-container flex items-center justify-center text-sm flex-shrink-0">
+                          {c.status === 'rendering' ? '⏳' : '🧸'}
+                        </div>
+                      )}
+                      <span className="text-xs font-black text-on-surface flex-1 truncate" title={c.appearance}>
+                        {c.name}
+                      </span>
+                      <select
+                        value={c.voiceId ?? ''}
+                        onChange={(e) => handleCharacterVoice(c.id, e.target.value)}
+                        className="text-[11px] font-bold py-1.5 px-2 border border-outline rounded-lg bg-white max-w-[46%]"
+                      >
+                        <option value="">Giọng dẫn chuyện</option>
+                        {voices.map((v) => <option key={v.id} value={v.voiceId}>{v.name}</option>)}
+                      </select>
+                    </div>
+                  ))}
+                  <p className="text-[10px] text-outline font-medium">
+                    Cảnh có nhân vật thoại sẽ dùng giọng của nhân vật đó; cảnh còn lại dùng giọng chọn ở trên.
+                  </p>
+                </div>
+              )}
+
               <button onClick={handleAssign} disabled={assigning || !targetVideo || !selectedVoice}
                 className="w-full py-3.5 bg-[#2d6c00] text-white rounded-full font-extrabold text-sm shadow-md flex items-center justify-center gap-2 disabled:opacity-50">
                 {assigning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
